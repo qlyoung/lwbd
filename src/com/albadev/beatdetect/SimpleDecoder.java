@@ -11,11 +11,10 @@ import javazoom.jl.decoder.SampleBuffer;
 
 
 /**
- * Wrapper for JLayer that returns 1024 sample frames instead of JLayer's 2304.
- * Because it's easier to write this class than change all my magic numbers.
+ * Wrapper for JLayer that returns 1024 sample frames instead of JLayer's 2304,
+ * because it's easier to write this class than change all my magic numbers.
  * 
  * @author albatross
- * 
  */
 
 public class SimpleDecoder {
@@ -40,8 +39,8 @@ public class SimpleDecoder {
 		fillNextNineFrames();
 	}
 
-	public int[] getNextInterlacedFrame() throws DecoderException,
-			BitstreamException {
+	public int[] getNextInterlacedFrame() throws DecoderException, BitstreamException {
+		
 		if (hitEnd)
 			return null;
 
@@ -92,16 +91,17 @@ public class SimpleDecoder {
 	}
 
 	/**
-	 * Merges double channel PCM data into single-channel by averaging the left
-	 * and right channels to produce a single value for each frame.
+	 * Merges double channel PCM data into single-channel by averaging.
 	 * 
 	 * @param samples
-	 *            An integer array containing interlaced samples. E.G. first
-	 *            element is from left channel, second element is from right
-	 *            channel, third is from left, fourth from right, etc.
+	 * An integer array containing interlaced samples. E.G. first
+	 * element is from left channel, second element is from right
+	 * channel, third is from left, fourth from right, etc. Don't pass
+	 * an odd-sized array to it unless. That would be stupid.
 	 * 
-	 * @return An integer array containing the merged data. It is half the size
-	 *         of the array given it.
+	 * @return
+	 * An integer array containing the merged data. It is exactly 
+	 * half the size of the array given it.
 	 */
 	private int[] mergeChannels(int[] samples) {
 
