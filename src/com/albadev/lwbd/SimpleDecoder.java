@@ -1,4 +1,4 @@
-package com.albadev.beatdetect;
+package com.albadev.lwbd;
 
 import java.io.InputStream;
 import java.util.ArrayList;

@@ -1,5 +1,8 @@
-package com.albadev.beatdetect;
+package com.albadev.lwbd;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -154,6 +157,9 @@ public class BeatDetector {
 	public BeatDetector(InputStream stream) {
 		audioStream = stream;
 	}
+	public BeatDetector(File mp3file) throws FileNotFoundException{
+		this(new FileInputStream(mp3file));
+	}
 
 	/**
 	 * Detects rhythmic onsets in the given audio stream
@@ -236,7 +242,7 @@ public class BeatDetector {
 	 * @param stream
 	 *            The PrintStream. Can be null.
 	 */
-	public void setDebugStream(PrintStream stream) {
+	public void setVerbose(PrintStream stream) {
 		this.debugStream = stream;
 	}
 

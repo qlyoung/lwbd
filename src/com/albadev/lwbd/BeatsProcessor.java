@@ -1,4 +1,4 @@
-package com.albadev.beatdetect;
+package com.albadev.lwbd;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;

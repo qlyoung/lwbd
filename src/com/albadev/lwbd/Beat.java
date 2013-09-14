@@ -1,4 +1,4 @@
-package com.albadev.beatdetect;
+package com.albadev.lwbd;
 
 /***
  * Represents a single rhythmic onset at a discrete point in time,
@@ -25,5 +25,11 @@ public class Beat implements Cloneable {
 		return super.clone();
 	}
 
+	@Override
+	public String toString() {
+		String str = "time: " + timeMs + "\n"; 
+		str += "energy: " + energy;
+		return str;
+	}
 
 }
