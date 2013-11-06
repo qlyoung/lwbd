@@ -9,10 +9,14 @@ package com.albadev.lwbd;
 
 public class Beat implements Cloneable {
 
-
+	/***
+	 * this beat's in-song time in milliseconds
+	 */
 	public final long timeMs;
+	/***
+	 * this beat's sound energy (normalized to range [0, 1])
+	 */
 	public final float energy;
-
 
 	public Beat(long timeMs, float energy){
 		this.timeMs = timeMs;

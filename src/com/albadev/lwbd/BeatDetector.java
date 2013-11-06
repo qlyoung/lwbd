@@ -2,7 +2,6 @@ package com.albadev.lwbd;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -26,7 +25,7 @@ import com.badlogic.audio.analysis.FFT;
  */
 
 public class BeatDetector {
-
+	
 	public static class AudioFunctions {
 
 		/**
@@ -151,15 +150,11 @@ public class BeatDetector {
 	
 	}
 
-	private InputStream audioStream;
-	private PrintStream debugStream;
-
-	public BeatDetector(InputStream stream) {
-		audioStream = stream;
-	}
-	public BeatDetector(File mp3file) throws FileNotFoundException{
-		this(new FileInputStream(mp3file));
-	}
+	private static PrintStream debugStream;
+	
+	public static final float SENSITIVITY_AGGRESSIVE = 1.0f;
+	public static final float SENSITIVITY_STANDARD = 1.4f;
+	public static final float SENSITIVITY_LOW = 1.7f;
 
 	/**
 	 * Detects rhythmic onsets in the given audio stream
@@ -168,51 +163,44 @@ public class BeatDetector {
 	 * @throws JavaLayerException If the stream is not an audio stream
 	 * @throws IOException If the stream is not valid
 	 */
-	public ArrayList<Beat> detectBeats(float sensitivity) throws JavaLayerException, IOException {
-
-		long start_time = System.currentTimeMillis();
+	public static ArrayList<Beat> detectBeats(File audioFile, float sensitivity) throws JavaLayerException, IOException{
+		return detectBeats(new FileInputStream(audioFile), sensitivity);
+	}
+	public static ArrayList<Beat> detectBeats(InputStream audioStream, float sensitivity) throws JavaLayerException, IOException {
 		
+		long start_time = System.currentTimeMillis();
 
 		writeDebug("Calculating spectral flux values...");
 		ArrayList<Float> spectralFluxes = AudioFunctions.getSpectralFluxes(audioStream);
 
-
 		writeDebug("Detecting rhythmic onsets...");
 		ArrayList<Float> peaks = AudioFunctions.getPeaks((ArrayList<Float>) spectralFluxes, sensitivity);
 
-
 		writeDebug("Post processing...");
-
 		ArrayList<Beat> beats = new ArrayList<Beat>();
 		{
-			
-			// Convert to time - energy map
+
 			LinkedHashMap<Long, Float> timeEnergyMap = new LinkedHashMap<Long, Float>(15);
-			{
+			
+			{// Convert to time - energy map
 				long i = 0;
 				for (float f : peaks) {
 
 					if (f > 0) {
-
 						long timeInMillis = (long) (((float) i * (1024f / 44100f)) * 1000f);
 						timeEnergyMap.put(timeInMillis, f);
-
 					}
 
 					i++;
 				}
 			}
 
-
 			{// normalize values to range [0, 1]
 				float max = 0;
 
-
-				for (Float f : timeEnergyMap.values()){
-					if (f > max)
+				for (Float f : timeEnergyMap.values())
+					if (f > max) 
 						max = f;
-				}
-
 
 				float value = 0;
 				for (Long l : timeEnergyMap.keySet()){
@@ -221,7 +209,6 @@ public class BeatDetector {
 					timeEnergyMap.put(l, value);
 				}
 			}
-			
 			
 			// store beats in a collection
 			for (Long l : timeEnergyMap.keySet()){
@@ -235,30 +222,26 @@ public class BeatDetector {
 
 		return beats;
 	}
-
 	
 	/**
 	 * Set the PrintStream to print debug information to.
 	 * @param stream
 	 *            The PrintStream. Can be null.
 	 */
-	public void setVerbose(PrintStream stream) {
-		this.debugStream = stream;
+	public static void setVerbose(PrintStream stream) {
+		debugStream = stream;
 	}
-
 	/**
 	 * Write a debug message to the PrintStream provided by the client.
 	 * @param message
 	 *            The message to print.
 	 */
-	private void writeDebug(String message) {
-		if (this.debugStream != null) {
-			this.debugStream.println(message);
+	private static void writeDebug(String message) {
+		if (debugStream != null) {
+			debugStream.println(message);
 		}
 	}
-
 	/**
-	 * Print the results of a complete detection operation.
 	 * 
 	 * @param peakCount
 	 *            Amount of actual beats
@@ -267,7 +250,7 @@ public class BeatDetector {
 	 * @param time
 	 *            How long analysis took
 	 */
-	private void printResults(long time, int fluxCount, int beatCount) {
+	private static void printResults(long time, int fluxCount, int beatCount) {
 		writeDebug("---Audio Analysis Complete---");
 		writeDebug("Time taken: " + String.valueOf(time / 1000l) + " seconds");
 		writeDebug("Flux values: " + fluxCount);
