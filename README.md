@@ -10,8 +10,8 @@ lwbd takes mp3 files sampled at 44.1 khz and returns a collection of
 Beat objects. Each Beat object contains the time in the song that a beat
 occurs and the instantaneous sound energy at that time.
 
-lwbd is a pure Java implementation of Frédéric Patin's Beat Detection 
-Algorithm #1 (Simple Sound Energy) [found here](
+lwbd is a pure Java implementation of Frédéric Patin's Frequency
+selected sound energy algorithm #1 [found here](
 http://www.flipcode.com/misc/BeatDetectionAlgorithms.pdf).
 As such it does not rely on the Java Media Framework (JMF) or javax.
 This means it is 100% portable; you can run it anywhere Java runs,
