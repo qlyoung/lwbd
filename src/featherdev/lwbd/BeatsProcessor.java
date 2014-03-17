@@ -1,60 +1,74 @@
 package featherdev.lwbd;
 
 import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 
 /**
- * Post processor for use with arraylists returned by
- * AudioFunctions.detectPeaks(). Formats data into convenient forms.
+ * Postprocessing functions for the beats you get from BeatDetector.
  * 
- * @author albatross
+ * How convenient!
+ * 
+ * @author featherdev
  * 
  */
 public class BeatsProcessor {
 
 	/**
-	 * Trims beats to guarantee that the specified number of milliseconds
-	 * are present between each beat. Compares consecutive beats and checks
-	 * time in between; if it is less than the specified amount of time then
-	 * it removes the smaller beat and checks against the next consecutive
-	 * values.
+	 * Thins beats so that no two are closer together than the given time period.
+	 * Prefers keeping stronger beats to weaker ones.
 	 * 
 	 * @param minTimeBetween
 	 * @param timeIntensityBeats
 	 */
-	public static void removeCloseBeats(long minTimeBetween,
-			LinkedHashMap<Long, Float> timeIntensityBeats) {
+	public static LinkedList<Beat> thinBeats(LinkedList<Beat> timeOrderedBeats, long minTimeBetween) {
 
-		Iterator<Long> iterator = timeIntensityBeats.keySet().iterator();
+		LinkedList<Beat> result = new LinkedList<Beat>();
+		
+		Iterator<Beat> iterator = timeOrderedBeats.iterator();
+		Beat currentBeat, nextBeat;
+		currentBeat = iterator.next();
 
-		long prevTime = iterator.next();
-		long currTime = 0l;
+		while ( iterator.hasNext() ) {
+			
+			nextBeat = iterator.next();
 
-		while (iterator.hasNext()) {
-			currTime = iterator.next();
-
-			if (currTime - prevTime < minTimeBetween) {
-
+			// check time difference
+			if (currentBeat.timeMs - nextBeat.timeMs > minTimeBetween) {
+				
 				// keep the stronger beat
-
-				if (timeIntensityBeats.get(prevTime) < timeIntensityBeats
-						.get(currTime)) {
-					
-					// remove the first beat
-					timeIntensityBeats.remove(prevTime);
-					
-					iterator = timeIntensityBeats.keySet().iterator();
-					prevTime = iterator.next();
-					
-				} else {
-					// remove the second beat
-					iterator.remove();
+				if (nextBeat.energy > currentBeat.energy) {
+					result.add(nextBeat);
+					currentBeat = nextBeat;
 				}
-			} else {
-				prevTime = currTime;
+				else {
+					// make sure we aren't adding a duplicate
+					if (!result.isEmpty()){
+						if (result.getLast() != currentBeat)
+							result.add(currentBeat);
+					}
+					else
+						result.add(currentBeat);
+				}
 			}
 		}
+		
+		return result;
 
 	}
-
+	/**
+	 * Drops all beats below the given sound energy threshold
+	 * @param beats
+	 * @param threshold
+	 * @return
+	 */
+	public static LinkedList<Beat> dropWeakBeats(LinkedList<Beat> beats, float threshold){
+		LinkedList<Beat> result = new LinkedList<Beat>();
+		
+		for (Beat b : beats){
+			if (b.energy > threshold)
+				result.add(b);
+		}
+		
+		return result;
+	}
 }
