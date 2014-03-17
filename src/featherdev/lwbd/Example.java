@@ -1,4 +1,4 @@
-package com.albadev.lwbd.example;
+package featherdev.lwbd;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,10 +6,7 @@ import java.util.ArrayList;
 
 import javazoom.jl.decoder.JavaLayerException;
 
-import com.albadev.lwbd.Beat;
-import com.albadev.lwbd.BeatDetector;
-
-public class MainExample {
+public class Example {
 
 	/**
 	 * This program demonstrates the use of lwbd

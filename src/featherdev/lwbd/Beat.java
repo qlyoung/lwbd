@@ -1,9 +1,9 @@
-package com.albadev.lwbd;
+package featherdev.lwbd;
 
 /***
  * Represents a single rhythmic onset at a discrete point in time,
  * with a discrete sound energy in the range [0, 1]
- * @author albatross
+ * @author featherdev
  *
  */
 
