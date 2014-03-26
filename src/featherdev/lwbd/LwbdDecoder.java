@@ -6,6 +6,6 @@ public interface LwbdDecoder {
 	 * Must return an integer array with 1024 deinterlaced samples
 	 * @return
 	 */
-	public int[] getNextFrame();
+	public short[] nextMonoFrame();
 
 }

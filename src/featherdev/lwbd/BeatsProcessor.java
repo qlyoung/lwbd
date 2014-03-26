@@ -1,7 +1,7 @@
 package featherdev.lwbd;
 
-import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.ListIterator;
 
 /**
  * Postprocessing functions for the beats you get from BeatDetector.
@@ -17,43 +17,28 @@ public class BeatsProcessor {
 	 * Thins beats so that no two are closer together than the given time period.
 	 * Prefers keeping stronger beats to weaker ones.
 	 * 
-	 * @param minTimeBetween
-	 * @param timeIntensityBeats
+	 * @param gapMs minimum time between beats in milliseconds
 	 */
-	public static LinkedList<Beat> thinBeats(LinkedList<Beat> timeOrderedBeats, long minTimeBetween) {
-
+	public static LinkedList<Beat> thinBeats(LinkedList<Beat> timeOrderedBeats, long gapMs) {
 		LinkedList<Beat> result = new LinkedList<Beat>();
+
+		ListIterator<Beat> iterator = timeOrderedBeats.listIterator();
+		result.add(iterator.next());
 		
-		Iterator<Beat> iterator = timeOrderedBeats.iterator();
-		Beat currentBeat, nextBeat;
-		currentBeat = iterator.next();
-
-		while ( iterator.hasNext() ) {
-			
-			nextBeat = iterator.next();
-
-			// check time difference
-			if (currentBeat.timeMs - nextBeat.timeMs > minTimeBetween) {
-				
-				// keep the stronger beat
-				if (nextBeat.energy > currentBeat.energy) {
-					result.add(nextBeat);
-					currentBeat = nextBeat;
-				}
-				else {
-					// make sure we aren't adding a duplicate
-					if (!result.isEmpty()){
-						if (result.getLast() != currentBeat)
-							result.add(currentBeat);
-					}
-					else
-						result.add(currentBeat);
-				}
+		while(iterator.hasNext()){
+			Beat currBeat = iterator.next();
+			Beat prevBeat = result.getLast();
+		
+			if (currBeat.timeMs - prevBeat.timeMs >= gapMs)
+				result.add(currBeat);
+			else {
+				Beat winner = currBeat.energy > prevBeat.energy ? currBeat : prevBeat;
+				int index = result.size() - 1;
+				result.set(index, winner);
 			}
 		}
 		
 		return result;
-
 	}
 	/**
 	 * Drops all beats below the given sound energy threshold

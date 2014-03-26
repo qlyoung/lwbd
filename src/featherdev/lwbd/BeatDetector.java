@@ -3,6 +3,7 @@ package featherdev.lwbd;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 
 /**
  * lwbd -- portable lightweight beat detector
@@ -23,29 +24,27 @@ public class BeatDetector {
 		 * @throws DecoderException
 		 * @throws BitstreamException
 		 */
-		public static ArrayList<Float> calculateSpectralFluxes(LwbdDecoder decoder) {
+		public static LinkedList<Float> calculateSpectralFluxes(LwbdDecoder decoder) {
 
 			// some collections and objects we'll need
-			float[] currentSpectrum, previousSpectrum;
 			FFT transformer = new FFT(1024, 44100);
 			transformer.window(FFT.HAMMING);
-
-			// make a list to hold the spectral fluxes
-			ArrayList<Float> fluxes = new ArrayList<Float>();
-
+			float[] currentSpectrum, previousSpectrum;
+			LinkedList<Float> fluxes = new LinkedList<Float>();
 			int spectrumSize = (1024 / 2) + 1;
 			currentSpectrum = new float[spectrumSize];
 			previousSpectrum = new float[spectrumSize];
 
-			// calculate spectral fluxes
-			int[] t = decoder.getNextFrame();
 			
-			while (t.length == 1024) {
+			// calculate spectral fluxes
+			short[] protoframe = decoder.nextMonoFrame();
+			
+			while (protoframe.length == 1024) {
 
 				// convert to float
-				float[] frame = new float[t.length];
+				float[] frame = new float[protoframe.length];
 				for (int i = 0; i < frame.length; i++)
-					frame[i] = (float) t[i] / 32768f;
+					frame[i] = (float) protoframe[i] / 32768f;
 
 				// fft
 				transformer.forward(frame);
@@ -63,7 +62,7 @@ public class BeatDetector {
 
 				fluxes.add(flux);
 				
-				t = decoder.getNextFrame();
+				protoframe = decoder.nextMonoFrame();
 			}
 
 			return fluxes;
@@ -79,7 +78,7 @@ public class BeatDetector {
 		 *         those values are the original sample values. The higher the
 		 *         value the stronger the beat.
 		 */
-		public static ArrayList<Float> detectPeaks(ArrayList<Float> spectralFluxes, float sensitivity) {
+		public static LinkedList<Float> detectPeaks(LinkedList<Float> spectralFluxes, float sensitivity) {
 
 			ArrayList<Float> threshold = new ArrayList<Float>();
 
@@ -109,7 +108,7 @@ public class BeatDetector {
 					prunedSpectralFluxes.add((float) 0);
 			}
 
-			ArrayList<Float> peaks = new ArrayList<Float>();
+			LinkedList<Float> peaks = new LinkedList<Float>();
 
 			for (int i = 0; i < prunedSpectralFluxes.size() - 1; i++) {
 				if (prunedSpectralFluxes.get(i) > prunedSpectralFluxes
@@ -136,14 +135,14 @@ public class BeatDetector {
 	 * @param sensitivity
 	 * @return
 	 */
-	public static ArrayList<Beat> detectBeats(LwbdDecoder decoder, float sensitivity) {
+	public static LinkedList<Beat> detectBeats(LwbdDecoder decoder, float sensitivity) {
 
-		ArrayList<Float> spectralFluxes = AudioFunctions.calculateSpectralFluxes(decoder);
-		ArrayList<Float> peaks = AudioFunctions.detectPeaks((ArrayList<Float>) spectralFluxes, sensitivity);
-		ArrayList<Beat> beats = new ArrayList<Beat>();
-		LinkedHashMap<Long, Float> timeEnergyMap = new LinkedHashMap<Long, Float>( 15);
+		LinkedList<Float> spectralFluxes = AudioFunctions.calculateSpectralFluxes(decoder);
+		LinkedList<Float> peaks = AudioFunctions.detectPeaks(spectralFluxes, sensitivity);
+		LinkedList<Beat> beats = new LinkedList<Beat>();
 
 		// Convert to time - energy map
+		LinkedHashMap<Long, Float> timeEnergyMap = new LinkedHashMap<Long, Float>();
 		long i = 0;
 		for (float f : peaks) {
 			if (f > 0) {
@@ -167,7 +166,8 @@ public class BeatDetector {
 			timeEnergyMap.put(l, value);
 		}
 
-		// store beats in a collection
+		// link beats in a time-ordered list
+		// TODO: sort by time, just to be safe
 		for (Long l : timeEnergyMap.keySet())
 			beats.add(new Beat(l, timeEnergyMap.get(l)));
 
