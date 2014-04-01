@@ -25,8 +25,8 @@ Platforms supported:
 
 How to Use
 ----------
-Here's an example of using one of the premade decoders to decode an
-mp3 file:
+Here's an example of using one of the premade decoders to perform
+beat detection on an mp3 file:
 
 ```
 File myAudioFile = new File("audio.mp3");
@@ -40,8 +40,8 @@ Decoders
 --------
 Internally, lwbd operates only on PCM data. However, it is somewhat
 unlikely that you will want to analyze .wav files. It far more unlikely
-that I feel like hardcoding support for MP3, Ogg Vorbis, FLAC, AIFF, WMA
- - whatever you have - into lwbd.
+that I feel like hardcoding support for MP3, Ogg Vorbis, FLAC, AIFF,
+WMA - whatever you have - into lwbd.
  
 In order to provide a balance of convenience and usability, lwbd
 supplies an interface called 'LwbdDecoder'. You implement this interface
