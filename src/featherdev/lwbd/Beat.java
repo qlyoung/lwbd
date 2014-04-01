@@ -9,13 +9,7 @@ package featherdev.lwbd;
 
 public class Beat implements Cloneable {
 
-	/***
-	 * this beat's in-song time in milliseconds
-	 */
 	public final long timeMs;
-	/***
-	 * this beat's sound energy (normalized to range [0, 1])
-	 */
 	public final float energy;
 
 	public Beat(long timeMs, float energy){
@@ -23,17 +17,13 @@ public class Beat implements Cloneable {
 		this.energy = energy;
 	}
 
-
 	@Override
 	public Object clone() throws CloneNotSupportedException {
 		return super.clone();
 	}
-
 	@Override
 	public String toString() {
-		String str = "time: " + timeMs + "\n"; 
-		str += "energy: " + energy;
-		return str;
+		return timeMs + ":" + energy;
 	}
 
 }

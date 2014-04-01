@@ -3,8 +3,6 @@ package featherdev.lwbd.decoders;
 import com.badlogic.gdx.audio.io.Mpg123Decoder;
 import com.badlogic.gdx.files.FileHandle;
 
-import featherdev.lwbd.LwbdDecoder;
-
 /**
  * Wrapper for Gdx's Mpg123Decoder that implements lwbd's decoder interface
  * @author featherdev

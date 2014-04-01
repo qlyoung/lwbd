@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 
+import featherdev.lwbd.decoders.LwbdDecoder;
+import featherdev.lwbd.processing.fft.FFT;
+
 /**
  * lwbd -- portable lightweight beat detector
  * 
