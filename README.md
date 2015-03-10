@@ -25,8 +25,8 @@ Platforms supported:
 
 How to Use
 ----------
-Here's an example of using one of the premade decoders to decode an
-mp3 file:
+Here's an example of using one of the premade decoders to perform
+beat detection on an mp3 file:
 
 ```
 File myAudioFile = new File("audio.mp3");
@@ -40,8 +40,8 @@ Decoders
 --------
 Internally, lwbd operates only on PCM data. However, it is somewhat
 unlikely that you will want to analyze .wav files. It far more unlikely
-that I feel like hardcoding support for MP3, Ogg Vorbis, FLAC, AIFF, WMA
- - whatever you have - into lwbd.
+that I feel like hardcoding support for MP3, Ogg Vorbis, FLAC, AIFF,
+WMA - whatever you have - into lwbd.
  
 In order to provide a balance of convenience and usability, lwbd
 supplies an interface called 'LwbdDecoder'. You implement this interface
@@ -97,18 +97,4 @@ http://www.flipcode.com/misc/BeatDetectionAlgorithms.pdf)
 
 License
 -------
-```
-            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-                    Version 2, December 2004
-
- Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
-
- Everyone is permitted to copy and distribute verbatim or modified
- copies of this license document, and changing it is allowed as long
- as the name is changed.
-
-            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
-
-  0. You just DO WHAT THE FUCK YOU WANT TO.
-```
+I don't care what you do
