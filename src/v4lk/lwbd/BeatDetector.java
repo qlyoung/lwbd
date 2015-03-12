@@ -1,33 +1,33 @@
 package v4lk.lwbd;
 
-import java.io.IOException;
+import v4lk.lwbd.decoders.Decoder;
+import v4lk.lwbd.decoders.universal.JFlacDecoder;
+import v4lk.lwbd.decoders.universal.JLayerMp3Decoder;
+import v4lk.lwbd.processing.fft.FFT;
+import v4lk.lwbd.util.Beat;
+
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
-
-import v4lk.lwbd.decoders.LwbdDecoder;
-import v4lk.lwbd.processing.fft.FFT;
+import java.util.zip.DataFormatException;
 
 /**
- * lwbd -- portable lightweight beat detector
+ * lwbd -- a portable lightweight beat detector
  * 
- * @author featherdev
+ * @author Quentin Young
  */
-
 public class BeatDetector {
 
 	private static class AudioFunctions {
-
 		/**
 		 * Calculates the spectral flux value for each sequential pair of
 		 * 1024-sample windows in a given audio file
 		 * 
 		 * @return A list of all calculated spectral fluxes
-		 * @throws IOException
-		 * @throws DecoderException
-		 * @throws BitstreamException
 		 */
-		public static LinkedList<Float> calculateSpectralFluxes(LwbdDecoder decoder) {
+		public static LinkedList<Float> calculateSpectralFluxes(Decoder decoder) throws DataFormatException {
 
 			// some collections and objects we'll need
 			FFT transformer = new FFT(1024, 44100);
@@ -40,35 +40,37 @@ public class BeatDetector {
 
 			
 			// calculate spectral fluxes
-			short[] protoframe = decoder.nextMonoFrame();
-			
-			while (protoframe.length == 1024) {
+            try {
+                short[] protoframe = decoder.nextMonoFrame();
 
-				// convert to float
-				float[] frame = new float[protoframe.length];
-				for (int i = 0; i < frame.length; i++)
-					frame[i] = (float) protoframe[i] / 32768f;
+                while (protoframe.length == 1024) {
 
-				// fft
-				transformer.forward(frame);
+                    // convert to float
+                    float[] frame = new float[protoframe.length];
+                    for (int i = 0; i < frame.length; i++)
+                        frame[i] = (float) protoframe[i] / 32768f;
 
-				// array shuffle
-				System.arraycopy(currentSpectrum, 0, previousSpectrum, 0, currentSpectrum.length);
-				System.arraycopy(transformer.getSpectrum(), 0, currentSpectrum, 0, currentSpectrum.length);
+                    // fft
+                    transformer.forward(frame);
 
-				// calculate the spectral flux between two spectra
-				float flux = 0;
-				for (int i = 0; i < currentSpectrum.length; i++) {
-					float tFlux = (currentSpectrum[i] - previousSpectrum[i]);
-					flux += tFlux > 0 ? tFlux : 0;
-				}
+                    // array shuffle
+                    System.arraycopy(currentSpectrum, 0, previousSpectrum, 0, currentSpectrum.length);
+                    System.arraycopy(transformer.getSpectrum(), 0, currentSpectrum, 0, currentSpectrum.length);
 
-				fluxes.add(flux);
-				
-				protoframe = decoder.nextMonoFrame();
-			}
+                    // calculate the spectral flux between two spectra
+                    float flux = 0;
+                    for (int i = 0; i < currentSpectrum.length; i++) {
+                        float tFlux = (currentSpectrum[i] - previousSpectrum[i]);
+                        flux += tFlux > 0 ? tFlux : 0;
+                    }
 
-			return fluxes;
+                    fluxes.add(flux);
+
+                    protoframe = decoder.nextMonoFrame();
+                }
+            } catch (EOFException e) { }
+
+            return fluxes;
 		}
 		/**
 		 * Performs onset detection on a set of spectral fluxes
@@ -123,58 +125,198 @@ public class BeatDetector {
 
 			return peaks;
 		}
+    }
+    private static class ProcessingFunctions {
+        /**
+         * Calculates a time-energy map from a list of peaks.
+         * @param peaks an ordered list of peaks in an audio file.
+         * @return A time-energy map.
+         */
+        public static LinkedHashMap<Long, Float> convertToTimeEnergyMap(LinkedList<Float> peaks) {
+            // Convert to time - energy map
+            LinkedHashMap<Long, Float> timeEnergyMap = new LinkedHashMap<Long, Float>();
+            for (int i = 0; i < peaks.size(); i++){
+                if (peaks.get(i) > 0) {
+                    long timeInMillis = (long) (((float) i * (1024f / 44100f)) * 1000f);
+                    timeEnergyMap.put(timeInMillis, peaks.get(i));
+                }
+            }
+            return timeEnergyMap;
+        }
+        /**
+         * Normalizes all values in this hash map to [0, 1]. Does not normalize
+         * keys.
+         * @param map the map to normalize. This map is not modified.
+         * @return The normalized map.
+         */
+        public static LinkedHashMap<Long, Float> normalizeValues(final LinkedHashMap<Long, Float> map) {
+            // normalize values to range [0, 1]
+            LinkedHashMap<Long, Float> newMap = new LinkedHashMap<Long, Float>();
 
-	}
+            // find max value
+            float max = 0;
+            for (Float f : map.values())
+                if (f > max)
+                    max = f;
 
-	public static final float SENSITIVITY_AGGRESSIVE = 1.0f;
-	public static final float SENSITIVITY_STANDARD = 1.4f;
-	public static final float SENSITIVITY_LOW = 1.7f;
+            // divide all values by max value
+            float value;
+            for (Long l : newMap.keySet()) {
+                value = newMap.get(l);
+                value /= max;
+                newMap.put(l, value);
+            }
 
-	/**
-	 * Detects rhythmic onsets
-	 * 
-	 * @param decoder Something that returns the samples you want to analyze
-	 * in 1024-sample frames
-	 * @param sensitivity
-	 * @return
-	 */
-	public static LinkedList<Beat> detectBeats(LwbdDecoder decoder, float sensitivity) {
+            return newMap;
+        }
+        /**
+         * Converts a time energy map to a LinkedList of Beat objects. Convenience function.
+         * @param timeEnergyMap ordered time-energy map
+         * @return a LinkedList of Beat objects in the same ordering as the parameter map by key.
+         */
+        public static Beat[] convertToBeatArray(LinkedHashMap<Long, Float> timeEnergyMap) {
+            Iterator<Long> iterator = timeEnergyMap.keySet().iterator();
 
-		LinkedList<Float> spectralFluxes = AudioFunctions.calculateSpectralFluxes(decoder);
-		LinkedList<Float> peaks = AudioFunctions.detectPeaks(spectralFluxes, sensitivity);
-		LinkedList<Beat> beats = new LinkedList<Beat>();
+            Beat[] beats = new Beat[timeEnergyMap.size()];
+            for(int i = 0; i < beats.length; i++) {
+                long time = iterator.next();
+                beats[i] = new Beat(iterator.next(), timeEnergyMap.get(time));
+            }
 
-		// Convert to time - energy map
-		LinkedHashMap<Long, Float> timeEnergyMap = new LinkedHashMap<Long, Float>();
-		long i = 0;
-		for (float f : peaks) {
-			if (f > 0) {
-				long timeInMillis = (long) (((float) i * (1024f / 44100f)) * 1000f);
-				timeEnergyMap.put(timeInMillis, f);
-			}
-			i++;
-		}
+            return beats;
+        }
+    }
 
-		// normalize values to range [0, 1]
-		float max = 0;
+    public static enum AudioType { MP3, FLAC }
+    public static enum DetectorSensitivity {
+        HIGH (1.0f),
+        MIDDLING (1.4f),
+        LOW (1.7f);
 
-		for (Float f : timeEnergyMap.values())
-			if (f > max)
-				max = f;
+        float value;
+        DetectorSensitivity(float value) { this.value = value; }
+    }
 
-		float value = 0;
-		for (Long l : timeEnergyMap.keySet()) {
-			value = timeEnergyMap.get(l);
-			value /= max;
-			timeEnergyMap.put(l, value);
-		}
 
-		// link beats in a time-ordered list
-		// TODO: sort by time, just to be safe
-		for (Long l : timeEnergyMap.keySet())
-			beats.add(new Beat(l, timeEnergyMap.get(l)));
+    /**
+     * Perform beat detection on the provided audio data. This method
+     * will block until analysis has completed, which can take a while
+     * depending on the amount of audio to be analyzed and the capabilities
+     * of the hardware.
+     *
+     * This overload will use the middling sensitivity.
+     *
+     * @param audio java.io.File object initialized to a file containing
+     *              audio data of one of the supported types (i.e. .flac,
+     *              .mp3, etc.) Must b
+     * @param type one of the supported audio types in the enum AudioType
+     *             declared publicly in this class.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
+     * @throws java.util.zip.DataFormatException if the stream is invalid
+     */
+    public static Beat[] detectBeats(InputStream audio, AudioType type) throws EOFException, DataFormatException {
+        return detectBeats(audio, type, DetectorSensitivity.MIDDLING);
+    }
+    /**
+     * Perform beat detection on the provided audio data. This method
+     * will block until analysis has completed, which can take a while
+     * depending on the amount of audio to be analyzed and the capabilities
+     * of the hardware.
+     *
+     * This overload will use the middling sensitivity.
+     *
+     * @param audio java.io.File object initialized to a file containing
+     *              audio data of one of the supported types (i.e. .flac,
+     *              .mp3, etc.) Must b
+     * @param type one of the supported audio types in the enum AudioType
+     *             declared publicly in this class.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws java.io.FileNotFoundException if the file cannot be found
+     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
+     * @throws java.util.zip.DataFormatException if the stream is invalid
+     */
+    public static Beat[] detectBeats(File audio, AudioType type) throws FileNotFoundException, EOFException, DataFormatException {
+        return detectBeats(new FileInputStream(audio), type, DetectorSensitivity.MIDDLING);
+    }
+    /**
+     * Perform beat detection on the provided audio data. This method
+     * will block until analysis has completed, which can take a while
+     * depending on the amount of audio to be analyzed and the capabilities
+     * of the hardware.
+     *
+     * @param audio java.io.File object initialized to a file containing
+     *              audio data of one of the supported types (i.e. .flac,
+     *              .mp3, etc.) Must b
+     * @param type one of the supported audio types in the enum AudioType
+     *             declared publicly in this class.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     * @param sensitivity One of the preset sensitivity constants declared
+     *                    publicly in this lass.
+     *                    @see v4lk.lwbd.BeatDetector.DetectorSensitivity
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
+     * @throws java.util.zip.DataFormatException if the stream is invalid
+     */
+    public static Beat[] detectBeats(InputStream audio,
+                                               AudioType type,
+                                               DetectorSensitivity sensitivity) throws EOFException, DataFormatException {
 
-		return beats;
-	}
+        // initialize the appropriate decoder
+        Decoder decoder = null;
+        switch (type){
+            case MP3:
+                decoder = new JLayerMp3Decoder(audio);
+                break;
+            case FLAC:
+                try { decoder = new JFlacDecoder(audio); }
+                catch (IOException e) { throw new DataFormatException(); }
+                break;
+        }
 
+        // do beat detection
+        LinkedList<Float> spectralFluxes = AudioFunctions.calculateSpectralFluxes(decoder);
+        LinkedList<Float> peaks = AudioFunctions.detectPeaks(spectralFluxes, sensitivity.value);
+        // do some data transformation
+        LinkedHashMap<Long, Float> timeEnergyMap = ProcessingFunctions.convertToTimeEnergyMap(peaks);
+        timeEnergyMap = ProcessingFunctions.normalizeValues(timeEnergyMap);
+
+
+        return ProcessingFunctions.convertToBeatArray(timeEnergyMap);
+    }
+    /**
+     * Perform beat detection on the provided audio data. This method
+     * will block until analysis has completed, which can take a while
+     * depending on the amount of audio to be analyzed and the capabilities
+     * of the hardware.
+     *
+     * @param audio java.io.File object initialized to a file containing
+     *              audio data of one of the supported types (i.e. .flac,
+     *              .mp3, etc.) Must b
+     * @param type one of the supported audio types in the enum AudioType
+     *             declared publicly in this class.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     * @param sensitivity One of the preset sensitivity constants declared
+     *                    publicly in this lass.
+     *                    @see v4lk.lwbd.BeatDetector.DetectorSensitivity
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws java.io.FileNotFoundException if the file cannot be found
+     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
+     * @throws java.util.zip.DataFormatException if the stream is invalid
+     */
+    public static Beat[] detectBeats(File audio,
+                                               AudioType type,
+                                               DetectorSensitivity sensitivity) throws FileNotFoundException, EOFException, DataFormatException {
+        return detectBeats(new FileInputStream(audio), type, sensitivity);
+    }
 }

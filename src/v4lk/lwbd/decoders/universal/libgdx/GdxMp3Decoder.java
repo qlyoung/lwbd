@@ -1,19 +1,20 @@
-package v4lk.lwbd.decoders;
+package v4lk.lwbd.decoders.universal.libgdx;
 
-import com.badlogic.gdx.audio.io.VorbisDecoder;
+import com.badlogic.gdx.audio.io.Mpg123Decoder;
 import com.badlogic.gdx.files.FileHandle;
+import v4lk.lwbd.decoders.Decoder;
 
 /**
- * Wrapper for Gdx's VorbisDecoder that implements lwbd's decoder interface
+ * Wrapper for Gdx's Mpg123Decoder that implements lwbd's decoder interface
  * @author featherdev
  *
  */
-public class GdxOggDecoder implements LwbdDecoder {
+public class GdxMp3Decoder implements Decoder {
+
+	Mpg123Decoder decoder;
 	
-	VorbisDecoder decoder;
-	
-	public GdxOggDecoder(FileHandle f){
-		decoder = new VorbisDecoder(f);
+	public GdxMp3Decoder(FileHandle f){
+		decoder = new Mpg123Decoder(f);
 	}
 
 	private short[] mergeChannels(short[] samples) {
@@ -40,5 +41,5 @@ public class GdxOggDecoder implements LwbdDecoder {
 		else
 			return mergeChannels(samples);
 	}
-
+	
 }

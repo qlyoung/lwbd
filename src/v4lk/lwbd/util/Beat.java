@@ -1,4 +1,4 @@
-package v4lk.lwbd;
+package v4lk.lwbd.util;
 
 /***
  * Represents a single rhythmic onset at a discrete point in time,

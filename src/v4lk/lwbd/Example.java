@@ -1,32 +1,26 @@
 package v4lk.lwbd;
 
+import v4lk.lwbd.BeatDetector.AudioType;
+import v4lk.lwbd.util.Beat;
+
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.LinkedList;
-
-import v4lk.lwbd.decoders.JLayerMp3Decoder;
-import v4lk.lwbd.decoders.LwbdDecoder;
+import java.util.zip.DataFormatException;
 
 /***
  * Runnable CLI example
  */
 public class Example {
 
-	public static void main(String[] args) throws FileNotFoundException {
-		// get your audio
-        File myAudioFile = new File(args[0]);
-        // initialize the appropriate decoder for your platform
-		LwbdDecoder decoder = new JLayerMp3Decoder(myAudioFile);
-        // perform beat detection
-        System.out.println("processing...");
-		LinkedList<Beat> beats = BeatDetector.detectBeats(decoder, 1.4f);
+	public static void main(String[] args) throws FileNotFoundException, EOFException, DataFormatException {
 
-        // print results
-        for (Beat b : beats){
-            System.out.print("Time: " + (b.timeMs / 1000f) + "s");
-            System.out.print("\tEnergy: " + b.energy + "\n");
+        File audioFile = new File(args[0]);
+        Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.FLAC);
+
+        for (Beat b : beats) {
+            System.out.println(b.toString());
         }
-
 	}
 
 }
