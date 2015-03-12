@@ -197,7 +197,6 @@ public class BeatDetector {
         DetectorSensitivity(float value) { this.value = value; }
     }
 
-
     /**
      * Perform beat detection on the provided audio data. This method
      * will block until analysis has completed, which can take a while
@@ -216,7 +215,8 @@ public class BeatDetector {
      *         @see v4lk.lwbd.util.Beat
      *
      * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid
+     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
+     * format
      */
     public static Beat[] detectBeats(InputStream audio, AudioType type) throws EOFException, DataFormatException {
         return detectBeats(audio, type, DetectorSensitivity.MIDDLING);
@@ -240,7 +240,8 @@ public class BeatDetector {
      *
      * @throws java.io.FileNotFoundException if the file cannot be found
      * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid
+     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
+     * format
      */
     public static Beat[] detectBeats(File audio, AudioType type) throws FileNotFoundException, EOFException, DataFormatException {
         return detectBeats(new FileInputStream(audio), type, DetectorSensitivity.MIDDLING);
@@ -264,7 +265,8 @@ public class BeatDetector {
      *         @see v4lk.lwbd.util.Beat
      *
      * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid
+     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
+     * format
      */
     public static Beat[] detectBeats(InputStream audio,
                                                AudioType type,
@@ -312,7 +314,8 @@ public class BeatDetector {
      *
      * @throws java.io.FileNotFoundException if the file cannot be found
      * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid
+     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
+     * format
      */
     public static Beat[] detectBeats(File audio,
                                                AudioType type,

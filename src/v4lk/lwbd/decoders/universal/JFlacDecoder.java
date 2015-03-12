@@ -49,7 +49,7 @@ public class JFlacDecoder implements Decoder {
      * @throws java.io.UnsupportedEncodingException if this FLAC file
      *         has an unsupported sample rate or more than two channels.
      */
-    public JFlacDecoder(InputStream stream) throws IOException {
+    public JFlacDecoder(InputStream stream) throws IOException, DataFormatException {
         // setup decoder
         decoder = new FLACDecoder(stream);
         Metadata[] d = decoder.readMetadata();
@@ -57,9 +57,9 @@ public class JFlacDecoder implements Decoder {
 
         // check support
         if (info.getChannels() > 2)
-            throw new UnsupportedEncodingException("Number of channels > 2; unsupported");
+            throw new DataFormatException("Number of channels > 2; unsupported");
         if (info.getSampleRate() != 44100)
-            throw new UnsupportedEncodingException("Sample rate is not 44.1kHz; unsupported.");
+            throw new DataFormatException("Sample rate is not 44.1kHz; unsupported.");
 
         // initialize buffer
         buffer = new LinkedList<Short>();

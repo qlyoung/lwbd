@@ -1,26 +1,22 @@
 lwbd
 ====
 
-*A lightweight beat detection library designed for simplicity and*
-*portability*
+*A lightweight beat detection library designed for simplicity and portability*
 
 What it does
 ------------
-lwbd detects rhythmic onsets (beats) in digital audio. Feed it an audio file, and lwbd will provide you with the time location and sound energy of each beat it detects.
+lwbd detects rhythmic onsets (beats) in digital audio. Feed it an audio file,
+and lwbd will provide you with the time location and sound energy of each beat
+it detects.
 
 Platforms & Formats
 -------------------
-lwbd has two branches. The ```master``` branch is compatible with any
-system providing a full JavaSE runtime. The ```android``` branch is
-compatible with Android systems, which do not provide a full JavaSE
-runtime. Due to the absence of the Java Sound API (javax.sound) in
-Android, the vast majority of audio codecs written in Java will not
-run on Android. As a result only a limited subset of the supported
-formats are supported in the ```android``` branch due to a lack of
-Android-compatible decoders.
+lwbd ultimately aims to support all major audio formats. However, due to runtime
+compatibility issues, some formats are currently unsupported on certain platforms.
 
-For all formats, 44.1kHz is the only sample rate supported. lwbd assumes
-all audio it receives is sampled at 44.1 kHz.
+Regardless of encoding, 44.1kHz is the only sample rate supported. lwbd assumes
+all audio it receives is sampled at 44.1 kHz, so if you pass it data of the wrong
+sample rate, you'll get garbage output.
 
 **Format availability by platform:**
 
@@ -35,81 +31,52 @@ all audio it receives is sampled at 44.1 kHz.
 
 Usage
 -----
-Here's an example of using one of the builtin decoders to perform
-beat detection on an mp3 file:
-
+lwbd's capabilities are accessed through a single method, BeatDetector.detectBeats().
 ```
-File myAudioFile = new File("audio.mp3");
-LwbdDecoder decoder = new JLayerMp3Decoder(myAudioFile);
-BeatDetector.detectBeats(decoder, 1.4f);
+File audioFile = new File("audio.mp3");
+Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.MP3);
 ```
+BeatDetector provides overloads of this method that support additional input sources
+and options.
 
-Decoders
---------
-Internally, lwbd operates only on PCM data. However, it is somewhat
-unlikely that you will want to analyze .wav files. Much more often it
-is the case that we want to analyze a file in one of the common consumer
-formats such as MP3 or Ogg Vorbis.
+Contributing
+------------
+Any audio library written in Java must take special care with respect to
+portability, because some platforms (specifially Android) do not implement
+the Java Sound API. Most audio libraries in Java are inextricably dependent
+on this API, and as a result, only work in environments that provide the full
+JavaSE runtime. I have taken great pains to ensure the compatibility of lwbd's
+core with all major subsets of Java, but it simply isn't feasible for me to write
+a platform-independent decoder from scratch for each format I want to support.
 
-To save you some trouble, lwbd provides baked-in decoders for
-many common formats. However, not all formats are implemented, and
-most of the baked-in decoders are unavailable on Android due to lack of
-support for the Java Sound API. Therefore, lwbd provides a LwbdDecoder
-interface which you can implement to add more decoders. You implement this
-interface to support the audio format of your choosing, instantiate your
-decoder with the audio you wish to analyze, and pass it to lwbd.
-lwbd will then use your decoder to get the raw PCM data it needs.
+Instead, lwbd's strategy is to pilfer the sources for external decoder libraries,
+wrap them for compatibility, and section them off by platform. None of this is
+exposed to client code; for (lots of) convenience, lwbd handles decoding audio
+behind the scenes. Decoders are located in ```v4lk.lwbd.decoders```. The pilfered
+sources they wrap are in ```v4lk.lwbd.processing```. If you want to add support
+for new formats or platforms, the process is:
 
-LwbdDecoder defines one method signature:
+1. Fork lwbd.
+2. Implement the interface ```v4lk.lwbd.decoders.Decoder``` to add your new
+   decoder.
+3. Send me a pull request. If it works, I'll merge it in.
 
-```
-public short[] nextMonoFrame();
-```
+If you do this I will love you forever. If you cbf, just implement the interface
+and send me the code in some fashion. I'll integrate it in if it works.
 
-When you implement your decoder class, all it is required to do is
-return 1024 mono (only 1 channel, no interlacing) PCM samples per call
-to this method. These 1024 samples together constitute one 'frame'.
-
-Consecutive calls to this function should return consecutive frames.
-That is, I should be able to get the entire audio file by calling
-nextMonoFrame() over and over again until your decoder reaches the end
-of the audio and runs out of frames. 
-
-Odds are that the last frame won't be exactly 1024 samples. If you're
-returning the last frame of audio, the size of the array should be
-the amount of samples you're returning, not 1024. Returning less than
-1024 samples tells lwbd that you've run out of audio.
-
-If you need an example, feel free to read the source for any of the
-builtin decoders.
-
-Builtin Decoders
-----------------
-You get 3 decoders out of the box:
-- GdxMp3Decoder
-- GdxOggDecoder
-- JLayerMp3Decoder
-
-GdxMp3Decoder and GdxOggDecoder are useful if you are using lwbd inside
-the game framework LibGDX. They take advantage of LibGDX's native
-MP3 and Ogg Vorbis decoders to speed up audio analysis. In order to
-use them you must have the gdx-audio extension added to your LibGDX
-project.
-
-JLayerMp3Decoder works with MP3 files. It uses JLayer to decode MP3.
-Because of this, it runs everywhere. The disadvantage to this is
-that JLayer is quite slow, especially on Android.
+The interface only has one method and is extensively Javadoc'd. I've tried
+to make it as easy as possible to contribute.
 
 Technical
 ---------
-lwbd is a pure Java implementation of Frédéric Patin's Frequency
-Selected Sound Energy Algorithm #1 [found here](
-http://www.flipcode.com/misc/BeatDetectionAlgorithms.pdf)
+lwbd's beat detection algorithm is an implementation of Frédéric Patin's Frequency
+Selected Sound Energy Algorithm #1, found in his excellent paper
+["Beat Detetion Algorithms."](http://www.flipcode.com/misc/BeatDetectionAlgorithms.pdf)
 
 License
 -------
 ```
-Copyright (C) 2915  Quentin Young
+Copyright (C) 2015  Quentin Young
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
