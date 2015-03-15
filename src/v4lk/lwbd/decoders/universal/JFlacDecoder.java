@@ -49,7 +49,7 @@ public class JFlacDecoder implements Decoder {
      * @throws java.io.UnsupportedEncodingException if this FLAC file
      *         has an unsupported sample rate or more than two channels.
      */
-    public JFlacDecoder(InputStream stream) throws IOException, DataFormatException {
+    public JFlacDecoder(InputStream stream) throws IOException {
         // setup decoder
         decoder = new FLACDecoder(stream);
         Metadata[] d = decoder.readMetadata();
@@ -57,19 +57,22 @@ public class JFlacDecoder implements Decoder {
 
         // check support
         if (info.getChannels() > 2)
-            throw new DataFormatException("Number of channels > 2; unsupported");
+            throw new IOException("Number of channels > 2; unsupported");
         if (info.getSampleRate() != 44100)
-            throw new DataFormatException("Sample rate is not 44.1kHz; unsupported.");
+            throw new IOException("Sample rate is not 44.1kHz; unsupported.");
 
         // initialize buffer
         buffer = new LinkedList<Short>();
     }
 
     @Override
-    public short[] nextMonoFrame() throws EOFException, DataFormatException{
+    public short[] nextMonoFrame() throws IOException {
 
         if (buffer.size() < 1024)
             fillBuffer();
+
+        if (buffer.size() < 1024)
+            return null;
 
         // grab samples from the buffer and return them
         short[] frame = new short[1024];
@@ -102,7 +105,7 @@ public class JFlacDecoder implements Decoder {
      * @throws java.util.zip.DataFormatException if the decoder is unable to read a frame.
      * @throws java.io.EOFException if the decoder is out of data.
      */
-    private void fillBuffer() throws EOFException, DataFormatException {
+    private void fillBuffer() throws IOException {
 
         // decode frames and store them in the buffer until the buffer has at least 1024 frames
         // or the decoder runs out of data
@@ -112,9 +115,8 @@ public class JFlacDecoder implements Decoder {
         while (buffer.size() < 1024) {
             try {
                 // grab a frame
-                Frame encodedFrame = null;
-                try { encodedFrame = decoder.readNextFrame(); }
-                catch (IOException e) { throw new DataFormatException("Unsupported file or corrupt stream"); }
+                Frame encodedFrame;
+                encodedFrame = decoder.readNextFrame();
 
                 byte[] byteFrame = decoder.decodeFrame(encodedFrame, null).getData();
 
@@ -130,9 +132,7 @@ public class JFlacDecoder implements Decoder {
                 // add samples to buffer
                 for (short s : shortFrame)
                     buffer.add(s);
-            } catch (NullPointerException e) {
-                throw new EOFException("Decoder out of data");
-            }
+            } catch (NullPointerException e) { }
         }
     }
 }

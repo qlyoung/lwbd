@@ -1,79 +1,65 @@
 package v4lk.lwbd.decoders.universal;
 
-import v4lk.lwbd.decoders.Decoder;
 import v4lk.lwbd.processing.jlayer.*;
+import v4lk.lwbd.processing.jlayer.Decoder;
 
-import java.io.EOFException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.zip.DataFormatException;
 
 
 /**
- * MP3 decoder for lwbd. Backed by JLayer.
+ * Decoder implementation backed by JLayer.
+ * Supports MP3.
+ * 
+ * @author Quentin Young
  */
+public class JLayerMp3Decoder implements v4lk.lwbd.decoders.Decoder {
 
-public class JLayerMp3Decoder implements Decoder {
-
-    /**
-     * MP3 bitstream.
-     */
-	private Bitstream bitstream;
-    /**
-     * JLayer decoder.
-     */
-	private v4lk.lwbd.processing.jlayer.Decoder decoder;
-    /**
-     * Buffer that will be used to store frames returned from
-     * FLACDecoder. Needed because while FLAC's frame sizes are
-     * variable, they tend to be large multiples of 1024, so we
-     * get more data than we need per frame decode op. The extra
-     * is stored here. nextMonoFrame() reads its data exclusively
-     * from this buffer.
-     */
-    private Queue<Short> buffer;
+	Bitstream bitstream;
+	Decoder decoder;
+	Queue<Short> buffer;
 
 	public JLayerMp3Decoder(InputStream stream) {
 		bitstream = new Bitstream(stream);
-		decoder = new v4lk.lwbd.processing.jlayer.Decoder();
+		decoder = new Decoder();
 		buffer =  new LinkedList<Short>();
 	}
 
-    @Override
-    public short[] nextMonoFrame() throws EOFException {
+    public short[] nextMonoFrame() throws IOException {
         if (buffer.isEmpty())
             fillBuffer();
 
-        short[] frame = new short[1024];
+        if (buffer.size() < 2048)
+            return null;
+
+        short[] frame = new short[2048];
+
         for (int i = 0; i < frame.length; i++)
             frame[i] = buffer.poll();
 
-        return frame;
+        return mergeChannels(frame);
     }
 
-	private void fillBuffer() throws EOFException {
-		while (buffer.size() < 1024){
-            SampleBuffer sampleBuffer = null;
-            try {
-                // get the header of the next frame in the bitstream
-                Header header = bitstream.readFrame();
-                // decode the frame in the bitstream specified by the header
-                sampleBuffer = (SampleBuffer) decoder.decodeFrame(header, bitstream);
-            }
-            catch (BitstreamException e) { throw new EOFException("unable to read header; eof"); }
-            catch (DecoderException e) { throw new EOFException("unable to decode frame; eof"); }
-            finally { bitstream.closeFrame(); }
+	private void fillBuffer() throws IOException {
+		SampleBuffer samplebuffer;
+		int i = 0;
+		Header h;
+		try { h = bitstream.readFrame(); }
+        catch (BitstreamException e) { throw new IOException("Decoder error"); }
+		
+		while (h != null && i++ < 8) {
+			try { samplebuffer = (SampleBuffer) decoder.decodeFrame(h, bitstream); }
+            catch (DecoderException e) { throw new IOException("Decoder error"); }
+			finally { bitstream.closeFrame(); }
 
-			short[] samples = sampleBuffer.getBuffer();
-
-            // convert to mono if necessary
-            if (decoder.getOutputChannels() == 2)
-                samples = mergeChannels(samples);
-
-            // add decoded samples to buffer
+			short[] samples = samplebuffer.getBuffer();
 			for (short s : samples)
 				buffer.add(s);
+			
+			try { h = bitstream.readFrame(); }
+            catch (BitstreamException e) { throw new IOException("Decoder error"); }
 		}
 	}
 	private short[] mergeChannels(short[] samples) {

@@ -27,7 +27,7 @@ public class BeatDetector {
 		 * 
 		 * @return A list of all calculated spectral fluxes
 		 */
-		public static LinkedList<Float> calculateSpectralFluxes(Decoder decoder) throws DataFormatException {
+		public static LinkedList<Float> calculateSpectralFluxes(Decoder decoder) throws IOException {
 
 			// some collections and objects we'll need
 			FFT transformer = new FFT(1024, 44100);
@@ -40,35 +40,29 @@ public class BeatDetector {
 
 			
 			// calculate spectral fluxes
-            try {
-                short[] protoframe = decoder.nextMonoFrame();
+            short[] protoframe = decoder.nextMonoFrame();
 
-                while (protoframe.length == 1024) {
+            while (protoframe != null && protoframe.length == 1024) {
+                // convert to float
+                float[] frame = new float[protoframe.length];
+                for (int i = 0; i < frame.length; i++)
+                    frame[i] = (float) protoframe[i] / 32768f;
+                // fft
+                transformer.forward(frame);
+                // array shuffle
+                System.arraycopy(currentSpectrum, 0, previousSpectrum, 0, currentSpectrum.length);
+                System.arraycopy(transformer.getSpectrum(), 0, currentSpectrum, 0, currentSpectrum.length);
 
-                    // convert to float
-                    float[] frame = new float[protoframe.length];
-                    for (int i = 0; i < frame.length; i++)
-                        frame[i] = (float) protoframe[i] / 32768f;
-
-                    // fft
-                    transformer.forward(frame);
-
-                    // array shuffle
-                    System.arraycopy(currentSpectrum, 0, previousSpectrum, 0, currentSpectrum.length);
-                    System.arraycopy(transformer.getSpectrum(), 0, currentSpectrum, 0, currentSpectrum.length);
-
-                    // calculate the spectral flux between two spectra
-                    float flux = 0;
-                    for (int i = 0; i < currentSpectrum.length; i++) {
-                        float tFlux = (currentSpectrum[i] - previousSpectrum[i]);
-                        flux += tFlux > 0 ? tFlux : 0;
-                    }
-
-                    fluxes.add(flux);
-
-                    protoframe = decoder.nextMonoFrame();
+                // calculate the spectral flux between two spectra
+                float flux = 0;
+                for (int i = 0; i < currentSpectrum.length; i++) {
+                    float tFlux = (currentSpectrum[i] - previousSpectrum[i]);
+                    flux += tFlux > 0 ? tFlux : 0;
                 }
-            } catch (EOFException e) { }
+
+                fluxes.add(flux);
+                protoframe = decoder.nextMonoFrame();
+            }
 
             return fluxes;
 		}
@@ -85,42 +79,35 @@ public class BeatDetector {
 		 */
 		public static LinkedList<Float> detectPeaks(LinkedList<Float> spectralFluxes, float sensitivity) {
 
-			ArrayList<Float> threshold = new ArrayList<Float>();
+			ArrayList<Float> thresholds = new ArrayList<Float>();
 
-			{
-				// This next bit calculates the threshold values for a range of
-				// ten
-				// spectral fluxes. We'll use this later too find onsets.
-
-				for (int i = 0; i < spectralFluxes.size(); i++) {
-					int start = Math.max(0, i - 10);
-					int end = Math.min(spectralFluxes.size() - 1, i + 10);
-					float mean = 0;
-					for (int j = start; j <= end; j++)
-						mean += spectralFluxes.get(j);
-					mean /= (end - start);
-					threshold.add((float) mean * sensitivity);
-				}
+			// calculate an energy threshold for each flux using a moving window of size 10
+			for (int i = 0; i < spectralFluxes.size(); i++) {
+				int start = Math.max(0, i - 10);
+				int end = Math.min(spectralFluxes.size() - 1, i + 10);
+				float mean = 0;
+				for (int j = start; j <= end; j++)
+				mean += spectralFluxes.get(j);
+				mean /= (end - start);
+				thresholds.add(mean * sensitivity);
 			}
 
+            // zero out non-beats and keep the beats
 			ArrayList<Float> prunedSpectralFluxes = new ArrayList<Float>();
-
-			for (int i = 0; i < threshold.size(); i++) {
-				if (threshold.get(i) <= spectralFluxes.get(i))
-					prunedSpectralFluxes.add(spectralFluxes.get(i)
-							- threshold.get(i));
-				else
-					prunedSpectralFluxes.add((float) 0);
+			for (int i = 0; i < thresholds.size(); i++) {
+                float flux = spectralFluxes.get(i);
+                float threshold = thresholds.get(i);
+                float value = flux >= threshold ? flux - threshold : 0;
+                prunedSpectralFluxes.add(value);
 			}
 
+            // condense millisecond-consecutive beats to a single beat
 			LinkedList<Float> peaks = new LinkedList<Float>();
-
 			for (int i = 0; i < prunedSpectralFluxes.size() - 1; i++) {
-				if (prunedSpectralFluxes.get(i) > prunedSpectralFluxes
-						.get(i + 1))
-					peaks.add(prunedSpectralFluxes.get(i));
-				else
-					peaks.add((float) 0);
+                float flux = prunedSpectralFluxes.get(i);
+                float nextflux = prunedSpectralFluxes.get(i + 1);
+                float value = flux > nextflux ? flux : 0;
+                peaks.add(value);
 			}
 
 			return peaks;
@@ -161,8 +148,8 @@ public class BeatDetector {
 
             // divide all values by max value
             float value;
-            for (Long l : newMap.keySet()) {
-                value = newMap.get(l);
+            for (Long l : map.keySet()) {
+                value = map.get(l);
                 value /= max;
                 newMap.put(l, value);
             }
@@ -177,15 +164,18 @@ public class BeatDetector {
         public static Beat[] convertToBeatArray(LinkedHashMap<Long, Float> timeEnergyMap) {
             Iterator<Long> iterator = timeEnergyMap.keySet().iterator();
 
+            System.out.println(timeEnergyMap.size() + " " + timeEnergyMap.keySet().size());
+
             Beat[] beats = new Beat[timeEnergyMap.size()];
             for(int i = 0; i < beats.length; i++) {
                 long time = iterator.next();
-                beats[i] = new Beat(iterator.next(), timeEnergyMap.get(time));
+                beats[i] = new Beat(time, timeEnergyMap.get(time));
             }
 
             return beats;
         }
     }
+    public static class UnsupportedPlatformException extends Exception {}
 
     public static enum AudioType { MP3, FLAC }
     public static enum DetectorSensitivity {
@@ -203,22 +193,23 @@ public class BeatDetector {
      * depending on the amount of audio to be analyzed and the capabilities
      * of the hardware.
      *
-     * This overload will use the middling sensitivity.
+     * This overload will use the default sensitivity (DetectorSensitivity.MIDDLING).
      *
-     * @param audio java.io.File object initialized to a file containing
-     *              audio data of one of the supported types (i.e. .flac,
-     *              .mp3, etc.) Must b
-     * @param type one of the supported audio types in the enum AudioType
-     *             declared publicly in this class.
+     * @param audio InputStream of encoded audio data corresponding to one of
+     *              the supported types (i.e. .flac, .mp3, etc.)
+     * @param type an AudioType indicating the format of the audio
      *             @see v4lk.lwbd.BeatDetector.AudioType
+     *
      * @return A time-ordered LinkedList of Beat objects.
      *         @see v4lk.lwbd.util.Beat
      *
-     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
-     * format
+     * @throws java.io.IOException on read error. Possibilities include a corrupted
+     * or closed stream, invalid data, or a mismatch between the audio format
+     * indicated by type parameter and the actual data.
+     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
+     * format is not supported on this platform.
      */
-    public static Beat[] detectBeats(InputStream audio, AudioType type) throws EOFException, DataFormatException {
+    public static Beat[] detectBeats(InputStream audio, AudioType type) throws IOException, UnsupportedPlatformException {
         return detectBeats(audio, type, DetectorSensitivity.MIDDLING);
     }
     /**
@@ -227,23 +218,23 @@ public class BeatDetector {
      * depending on the amount of audio to be analyzed and the capabilities
      * of the hardware.
      *
-     * This overload will use the middling sensitivity.
+     * This overload will use the default sensitivity (DetectorSensitivity.MIDDLING).
      *
-     * @param audio java.io.File object initialized to a file containing
-     *              audio data of one of the supported types (i.e. .flac,
-     *              .mp3, etc.) Must b
-     * @param type one of the supported audio types in the enum AudioType
-     *             declared publicly in this class.
+     * @param audio File of encoded audio data corresponding to one of
+     *              the supported types (i.e. .flac, .mp3, etc.)
+     * @param type an AudioType indicating the format of the audio
      *             @see v4lk.lwbd.BeatDetector.AudioType
+=
      * @return A time-ordered LinkedList of Beat objects.
      *         @see v4lk.lwbd.util.Beat
      *
-     * @throws java.io.FileNotFoundException if the file cannot be found
-     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
-     * format
+     * @throws java.io.IOException on read error. Possibilities include a corrupted
+     * or closed stream, invalid data, a mismatch between the audio format
+     * indicated by type parameter and the actual data, or an invalid File object.
+     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
+     * format is not supported on this platform.
      */
-    public static Beat[] detectBeats(File audio, AudioType type) throws FileNotFoundException, EOFException, DataFormatException {
+    public static Beat[] detectBeats(File audio, AudioType type) throws IOException, UnsupportedPlatformException {
         return detectBeats(new FileInputStream(audio), type, DetectorSensitivity.MIDDLING);
     }
     /**
@@ -252,46 +243,50 @@ public class BeatDetector {
      * depending on the amount of audio to be analyzed and the capabilities
      * of the hardware.
      *
-     * @param audio java.io.File object initialized to a file containing
-     *              audio data of one of the supported types (i.e. .flac,
-     *              .mp3, etc.) Must b
-     * @param type one of the supported audio types in the enum AudioType
-     *             declared publicly in this class.
+     * @param audio InputStream of encoded audio data corresponding to one of
+     *              the supported types (i.e. .flac, .mp3, etc.)
+     * @param type an AudioType indicating the format of the audio
      *             @see v4lk.lwbd.BeatDetector.AudioType
-     * @param sensitivity One of the preset sensitivity constants declared
-     *                    publicly in this lass.
+     * @param sensitivity a DetectorSensitivity indicating the detector's
+     *                    propensity to see beats in data
      *                    @see v4lk.lwbd.BeatDetector.DetectorSensitivity
+     *
      * @return A time-ordered LinkedList of Beat objects.
      *         @see v4lk.lwbd.util.Beat
      *
-     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
-     * format
+     * @throws java.io.IOException on read error. Possibilities include a corrupted
+     * or closed stream, invalid data, or a mismatch between the audio format
+     * indicated by type parameter and the actual data.
+     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
+     * format is not supported on this platform.
      */
     public static Beat[] detectBeats(InputStream audio,
                                                AudioType type,
-                                               DetectorSensitivity sensitivity) throws EOFException, DataFormatException {
+                                               DetectorSensitivity sensitivity) throws IOException, UnsupportedPlatformException {
 
         // initialize the appropriate decoder
-        Decoder decoder = null;
+        Decoder decoder;
         switch (type){
             case MP3:
                 decoder = new JLayerMp3Decoder(audio);
                 break;
             case FLAC:
-                try { decoder = new JFlacDecoder(audio); }
-                catch (IOException e) { throw new DataFormatException(); }
+                decoder = new JFlacDecoder(audio);
                 break;
+            default:
+                throw new UnsupportedPlatformException();
         }
 
         // do beat detection
         LinkedList<Float> spectralFluxes = AudioFunctions.calculateSpectralFluxes(decoder);
+        System.out.println(spectralFluxes.size());
         LinkedList<Float> peaks = AudioFunctions.detectPeaks(spectralFluxes, sensitivity.value);
+        System.out.println(peaks.size());
         // do some data transformation
         LinkedHashMap<Long, Float> timeEnergyMap = ProcessingFunctions.convertToTimeEnergyMap(peaks);
+        System.out.println(timeEnergyMap.size());
         timeEnergyMap = ProcessingFunctions.normalizeValues(timeEnergyMap);
-
-
+        System.out.println(timeEnergyMap.size());
         return ProcessingFunctions.convertToBeatArray(timeEnergyMap);
     }
     /**
@@ -300,26 +295,26 @@ public class BeatDetector {
      * depending on the amount of audio to be analyzed and the capabilities
      * of the hardware.
      *
-     * @param audio java.io.File object initialized to a file containing
-     *              audio data of one of the supported types (i.e. .flac,
-     *              .mp3, etc.) Must b
-     * @param type one of the supported audio types in the enum AudioType
-     *             declared publicly in this class.
+     * @param audio File of encoded audio data corresponding to one of
+     *              the supported types (i.e. .flac, .mp3, etc.)
+     * @param type an AudioType indicating the format of the audio
      *             @see v4lk.lwbd.BeatDetector.AudioType
-     * @param sensitivity One of the preset sensitivity constants declared
-     *                    publicly in this lass.
+     * @param sensitivity a DetectorSensitivity indicating the detector's
+     *                    propensity to see beats in data
      *                    @see v4lk.lwbd.BeatDetector.DetectorSensitivity
+     *
      * @return A time-ordered LinkedList of Beat objects.
      *         @see v4lk.lwbd.util.Beat
      *
-     * @throws java.io.FileNotFoundException if the file cannot be found
-     * @throws java.io.EOFException if the end of file has been reached or if the stream has corrupted
-     * @throws java.util.zip.DataFormatException if the stream is invalid or does not match the specified
-     * format
+     * @throws java.io.IOException on read error. Possibilities include a corrupted
+     * or closed stream, invalid data, a mismatch between the audio format
+     * indicated by type parameter and the actual data, or an invalid File object.
+     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
+     * format is not supported on this platform.
      */
     public static Beat[] detectBeats(File audio,
                                                AudioType type,
-                                               DetectorSensitivity sensitivity) throws FileNotFoundException, EOFException, DataFormatException {
+                                               DetectorSensitivity sensitivity) throws IOException, UnsupportedPlatformException {
         return detectBeats(new FileInputStream(audio), type, sensitivity);
     }
 }

@@ -3,21 +3,19 @@ package v4lk.lwbd;
 import v4lk.lwbd.BeatDetector.AudioType;
 import v4lk.lwbd.util.Beat;
 
-import java.io.EOFException;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.zip.DataFormatException;
+import java.io.IOException;
 
 /***
  * Runnable CLI example
  */
 public class Example {
 
-	public static void main(String[] args) throws FileNotFoundException, EOFException, DataFormatException {
+	public static void main(String[] args) throws IOException, BeatDetector.UnsupportedPlatformException {
 
         File audioFile = new File(args[0]);
-        Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.FLAC);
-
+        Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.MP3, BeatDetector.DetectorSensitivity.LOW);
+        System.out.println(beats.length);
         for (Beat b : beats) {
             System.out.println(b.toString());
         }
