@@ -8,61 +8,88 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Queue;
 
-
 /**
- * Decoder implementation backed by JLayer.
- * Supports MP3.
- * 
+ * MP3 decoder for lwbd. Backed by JLayer.
  * @author Quentin Young
  */
 public class JLayerMp3Decoder implements v4lk.lwbd.decoders.Decoder {
 
-	Bitstream bitstream;
-	Decoder decoder;
-	Queue<Short> buffer;
+    /**
+     * JLayer decoder class
+     */
+    private Decoder decoder;
+    /**
+     * MP3 input stream
+     */
+	private Bitstream bitstream;
+    /**
+     * decoded mono sample buffer
+     */
+	private Queue<Short> buffer;
 
+    /**
+     * Initialize this decoder
+     * @param stream binary MP3 input stream
+     * @throws IOException on decoder error
+     */
 	public JLayerMp3Decoder(InputStream stream) {
 		bitstream = new Bitstream(stream);
 		decoder = new Decoder();
 		buffer =  new LinkedList<Short>();
 	}
 
+    @Override
     public short[] nextMonoFrame() throws IOException {
-        if (buffer.isEmpty())
+
+        if (buffer.size() < 1024)
             fillBuffer();
 
-        if (buffer.size() < 2048)
+        if (buffer.size() < 1024)
             return null;
 
-        short[] frame = new short[2048];
+        short[] frame = new short[1024];
 
         for (int i = 0; i < frame.length; i++)
             frame[i] = buffer.poll();
 
-        return mergeChannels(frame);
+        return frame;
     }
 
+    /**
+     * Fills buffer with mono PCM samples as much as it can. Best-effort.
+     * @throws IOException on decoder error
+     */
 	private void fillBuffer() throws IOException {
-		SampleBuffer samplebuffer;
-		int i = 0;
-		Header h;
-		try { h = bitstream.readFrame(); }
-        catch (BitstreamException e) { throw new IOException("Decoder error"); }
-		
-		while (h != null && i++ < 8) {
-			try { samplebuffer = (SampleBuffer) decoder.decodeFrame(h, bitstream); }
-            catch (DecoderException e) { throw new IOException("Decoder error"); }
-			finally { bitstream.closeFrame(); }
 
-			short[] samples = samplebuffer.getBuffer();
-			for (short s : samples)
-				buffer.add(s);
-			
-			try { h = bitstream.readFrame(); }
-            catch (BitstreamException e) { throw new IOException("Decoder error"); }
-		}
+        while (buffer.size() < 1024) {
+            try {
+                // get & decode a frame
+                Header h = bitstream.readFrame();
+                if (h == null) // EoF, return
+                    return;
+                SampleBuffer samplebuffer = (SampleBuffer) decoder.decodeFrame(h, bitstream);
+                short[] samples = samplebuffer.getBuffer();
+
+                // merge channels to mono if we're working with stereo
+                if (decoder.getOutputChannels() == 2)
+                    samples = mergeChannels(samples);
+
+                // add samples to buffer
+                for (short s : samples)
+                    buffer.add(s);
+            } catch (DecoderException e) { throw new IOException("Decoder error", e);
+            } catch (BitstreamException e) { throw new IOException("Decoder error", e);
+            } finally {
+                bitstream.closeFrame();
+            }
+        }
 	}
-	private short[] mergeChannels(short[] samples) {
+    /**
+     * Merges stereo audio by averaging channels together
+     * @param samples interlaced stereo sample buffer
+     * @return mono sample buffer
+     */
+    private short[] mergeChannels(short[] samples) {
 		
 		int l = (int) Math.floor(samples.length / 2);
 		short[] merged = new short[l];

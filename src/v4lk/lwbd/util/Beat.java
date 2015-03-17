@@ -9,7 +9,13 @@ package v4lk.lwbd.util;
 
 public class Beat implements Cloneable {
 
+    /**
+     * the millisecond that beat occurs in the song
+     */
 	public final long timeMs;
+    /**
+     * beat energy, normalized to [0..1]
+     */
 	public final float energy;
 
 	public Beat(long timeMs, float energy){
@@ -23,7 +29,11 @@ public class Beat implements Cloneable {
 	}
 	@Override
 	public String toString() {
-		return timeMs + ":" + energy;
+        int totalSeconds = (int) (timeMs / 1000f);
+        int minutes = (int) (totalSeconds / 60f);
+        int seconds = totalSeconds - (60 * minutes);
+
+		return "energy " + String.format("%.2f", energy) + " @ " + minutes + ":" + seconds;
 	}
 
 }

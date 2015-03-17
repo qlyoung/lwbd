@@ -164,8 +164,6 @@ public class BeatDetector {
         public static Beat[] convertToBeatArray(LinkedHashMap<Long, Float> timeEnergyMap) {
             Iterator<Long> iterator = timeEnergyMap.keySet().iterator();
 
-            System.out.println(timeEnergyMap.size() + " " + timeEnergyMap.keySet().size());
-
             Beat[] beats = new Beat[timeEnergyMap.size()];
             for(int i = 0; i < beats.length; i++) {
                 long time = iterator.next();
@@ -279,14 +277,11 @@ public class BeatDetector {
 
         // do beat detection
         LinkedList<Float> spectralFluxes = AudioFunctions.calculateSpectralFluxes(decoder);
-        System.out.println(spectralFluxes.size());
         LinkedList<Float> peaks = AudioFunctions.detectPeaks(spectralFluxes, sensitivity.value);
-        System.out.println(peaks.size());
         // do some data transformation
         LinkedHashMap<Long, Float> timeEnergyMap = ProcessingFunctions.convertToTimeEnergyMap(peaks);
-        System.out.println(timeEnergyMap.size());
         timeEnergyMap = ProcessingFunctions.normalizeValues(timeEnergyMap);
-        System.out.println(timeEnergyMap.size());
+
         return ProcessingFunctions.convertToBeatArray(timeEnergyMap);
     }
     /**

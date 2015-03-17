@@ -14,11 +14,10 @@ public class Example {
 	public static void main(String[] args) throws IOException, BeatDetector.UnsupportedPlatformException {
 
         File audioFile = new File(args[0]);
-        Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.MP3, BeatDetector.DetectorSensitivity.LOW);
-        System.out.println(beats.length);
-        for (Beat b : beats) {
+        Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.FLAC, BeatDetector.DetectorSensitivity.LOW);
+
+        for (Beat b : beats)
             System.out.println(b.toString());
-        }
 	}
 
 }
