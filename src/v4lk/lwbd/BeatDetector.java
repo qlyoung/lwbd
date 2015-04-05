@@ -20,26 +20,26 @@ import java.util.zip.DataFormatException;
  */
 public class BeatDetector {
 
-	private static class AudioFunctions {
-		/**
-		 * Calculates the spectral flux value for each sequential pair of
-		 * 1024-sample windows in a given audio file
-		 * 
-		 * @return A list of all calculated spectral fluxes
-		 */
-		public static LinkedList<Float> calculateSpectralFluxes(Decoder decoder) throws IOException {
+    private static class AudioFunctions {
+        /**
+         * Calculates the spectral flux value for each sequential pair of
+         * 1024-sample windows in a given audio file
+         *
+         * @return A list of all calculated spectral fluxes
+         */
+        public static LinkedList<Float> calculateSpectralFluxes(Decoder decoder) throws IOException {
 
-			// some collections and objects we'll need
-			FFT transformer = new FFT(1024, 44100);
-			transformer.window(FFT.HAMMING);
-			float[] currentSpectrum, previousSpectrum;
-			LinkedList<Float> fluxes = new LinkedList<Float>();
-			int spectrumSize = (1024 / 2) + 1;
-			currentSpectrum = new float[spectrumSize];
-			previousSpectrum = new float[spectrumSize];
+            // some collections and objects we'll need
+            FFT transformer = new FFT(1024, 44100);
+            transformer.window(FFT.HAMMING);
+            float[] currentSpectrum, previousSpectrum;
+            LinkedList<Float> fluxes = new LinkedList<Float>();
+            int spectrumSize = (1024 / 2) + 1;
+            currentSpectrum = new float[spectrumSize];
+            previousSpectrum = new float[spectrumSize];
 
-			
-			// calculate spectral fluxes
+
+            // calculate spectral fluxes
             short[] protoframe = decoder.nextMonoFrame();
 
             while (protoframe != null && protoframe.length == 1024) {
@@ -65,53 +65,53 @@ public class BeatDetector {
             }
 
             return fluxes;
-		}
-		/**
-		 * Performs onset detection on a set of spectral fluxes
+        }
+        /**
+         * Performs onset detection on a set of spectral fluxes
 
-		 * @param sensitivity
-		 *            Sensitivity value for threshold function
-		 * @return An ArrayList<Float> containing a representation of the audio
-		 *         file. There are approx. 43 values for every 1 second of
-		 *         audio. All values are zero except where there are beats;
-		 *         those values are the original sample values. The higher the
-		 *         value the stronger the beat.
-		 */
-		public static LinkedList<Float> detectPeaks(LinkedList<Float> spectralFluxes, float sensitivity) {
+         * @param sensitivity
+         *            Sensitivity value for threshold function
+         * @return An ArrayList<Float> containing a representation of the audio
+         *         file. There are approx. 43 values for every 1 second of
+         *         audio. All values are zero except where there are beats;
+         *         those values are the original sample values. The higher the
+         *         value the stronger the beat.
+         */
+        public static LinkedList<Float> detectPeaks(LinkedList<Float> spectralFluxes, float sensitivity) {
 
-			ArrayList<Float> thresholds = new ArrayList<Float>();
+            ArrayList<Float> thresholds = new ArrayList<Float>();
 
-			// calculate an energy threshold for each flux using a moving window of size 10
-			for (int i = 0; i < spectralFluxes.size(); i++) {
-				int start = Math.max(0, i - 10);
-				int end = Math.min(spectralFluxes.size() - 1, i + 10);
-				float mean = 0;
-				for (int j = start; j <= end; j++)
-				mean += spectralFluxes.get(j);
-				mean /= (end - start);
-				thresholds.add(mean * sensitivity);
-			}
+            // calculate an energy threshold for each flux using a moving window of size 10
+            for (int i = 0; i < spectralFluxes.size(); i++) {
+                int start = Math.max(0, i - 10);
+                int end = Math.min(spectralFluxes.size() - 1, i + 10);
+                float mean = 0;
+                for (int j = start; j <= end; j++)
+                mean += spectralFluxes.get(j);
+                mean /= (end - start);
+                thresholds.add(mean * sensitivity);
+            }
 
             // zero out non-beats and keep the beats
-			ArrayList<Float> prunedSpectralFluxes = new ArrayList<Float>();
-			for (int i = 0; i < thresholds.size(); i++) {
+            ArrayList<Float> prunedSpectralFluxes = new ArrayList<Float>();
+            for (int i = 0; i < thresholds.size(); i++) {
                 float flux = spectralFluxes.get(i);
                 float threshold = thresholds.get(i);
                 float value = flux >= threshold ? flux - threshold : 0;
                 prunedSpectralFluxes.add(value);
-			}
+            }
 
             // condense millisecond-consecutive beats to a single beat
-			LinkedList<Float> peaks = new LinkedList<Float>();
-			for (int i = 0; i < prunedSpectralFluxes.size() - 1; i++) {
+            LinkedList<Float> peaks = new LinkedList<Float>();
+            for (int i = 0; i < prunedSpectralFluxes.size() - 1; i++) {
                 float flux = prunedSpectralFluxes.get(i);
                 float nextflux = prunedSpectralFluxes.get(i + 1);
                 float value = flux > nextflux ? flux : 0;
                 peaks.add(value);
-			}
+            }
 
-			return peaks;
-		}
+            return peaks;
+        }
     }
     private static class ProcessingFunctions {
         /**

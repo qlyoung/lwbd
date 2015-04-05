@@ -1,7 +1,6 @@
 package v4lk.lwbd.decoders.universal;
 
 import v4lk.lwbd.processing.jlayer.*;
-import v4lk.lwbd.processing.jlayer.Decoder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,22 +20,22 @@ public class JLayerMp3Decoder implements v4lk.lwbd.decoders.Decoder {
     /**
      * MP3 input stream
      */
-	private Bitstream bitstream;
+    private Bitstream bitstream;
     /**
      * decoded mono sample buffer
      */
-	private Queue<Short> buffer;
+    private Queue<Short> buffer;
 
     /**
      * Initialize this decoder
      * @param stream binary MP3 input stream
      * @throws IOException on decoder error
      */
-	public JLayerMp3Decoder(InputStream stream) {
-		bitstream = new Bitstream(stream);
-		decoder = new Decoder();
-		buffer =  new LinkedList<Short>();
-	}
+    public JLayerMp3Decoder(InputStream stream) {
+        bitstream = new Bitstream(stream);
+        decoder = new Decoder();
+        buffer =  new LinkedList<Short>();
+    }
 
     @Override
     public short[] nextMonoFrame() throws IOException {
@@ -59,7 +58,7 @@ public class JLayerMp3Decoder implements v4lk.lwbd.decoders.Decoder {
      * Fills buffer with mono PCM samples as much as it can. Best-effort.
      * @throws IOException on decoder error
      */
-	private void fillBuffer() throws IOException {
+    private void fillBuffer() throws IOException {
 
         while (buffer.size() < 1024) {
             try {
@@ -83,20 +82,20 @@ public class JLayerMp3Decoder implements v4lk.lwbd.decoders.Decoder {
                 bitstream.closeFrame();
             }
         }
-	}
+    }
     /**
      * Merges stereo audio by averaging channels together
      * @param samples interlaced stereo sample buffer
      * @return mono sample buffer
      */
     private short[] mergeChannels(short[] samples) {
-		
-		int l = (int) Math.floor(samples.length / 2);
-		short[] merged = new short[l];
-		
-		for (int i = 0; i < l; i++)
-			merged[i] = (short) ((samples[i * 2] + samples[i * 2 + 1]) / 2f);
-		
-		return merged;
-	}
+
+        int l = (int) Math.floor(samples.length / 2);
+        short[] merged = new short[l];
+
+        for (int i = 0; i < l; i++)
+            merged[i] = (short) ((samples[i * 2] + samples[i * 2 + 1]) / 2f);
+
+        return merged;
+    }
 }

@@ -11,13 +11,13 @@ import java.io.IOException;
  */
 public class Example {
 
-	public static void main(String[] args) throws IOException, BeatDetector.UnsupportedPlatformException {
+    public static void main(String[] args) throws IOException, BeatDetector.UnsupportedPlatformException {
 
         File audioFile = new File(args[0]);
         Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.FLAC, BeatDetector.DetectorSensitivity.LOW);
 
         for (Beat b : beats)
             System.out.println(b.toString());
-	}
+    }
 
 }

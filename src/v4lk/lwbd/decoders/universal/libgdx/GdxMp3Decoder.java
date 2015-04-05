@@ -11,35 +11,35 @@ import v4lk.lwbd.decoders.Decoder;
  */
 public class GdxMp3Decoder implements Decoder {
 
-	Mpg123Decoder decoder;
-	
-	public GdxMp3Decoder(FileHandle f){
-		decoder = new Mpg123Decoder(f);
-	}
+    Mpg123Decoder decoder;
 
-	private short[] mergeChannels(short[] samples) {
-		
-		int l = (int) Math.floor(samples.length / 2);
-		short[] merged = new short[l];
-		
-		for (int i = 0; i < l; i++)
-			merged[i] = (short) ((samples[i * 2] + samples[i * 2 + 1]) / 2f);
-		
-		return merged;
-	}
-	
-	@Override
-	public short[] nextMonoFrame() {
-		short[] samples = new short[2048];
-		int n = decoder.readSamples(samples, 0, 2048);
-		
-		if (n != 2048){
-			short[] actual = new short[n];
-			System.arraycopy(samples, 0, actual, 0, n);
-			return mergeChannels(actual);
-		}
-		else
-			return mergeChannels(samples);
-	}
-	
+    public GdxMp3Decoder(FileHandle f){
+        decoder = new Mpg123Decoder(f);
+    }
+
+    private short[] mergeChannels(short[] samples) {
+
+        int l = (int) Math.floor(samples.length / 2);
+        short[] merged = new short[l];
+
+        for (int i = 0; i < l; i++)
+            merged[i] = (short) ((samples[i * 2] + samples[i * 2 + 1]) / 2f);
+
+        return merged;
+    }
+
+    @Override
+    public short[] nextMonoFrame() {
+        short[] samples = new short[2048];
+        int n = decoder.readSamples(samples, 0, 2048);
+
+        if (n != 2048){
+            short[] actual = new short[n];
+            System.arraycopy(samples, 0, actual, 0, n);
+            return mergeChannels(actual);
+        }
+        else
+            return mergeChannels(samples);
+    }
+
 }

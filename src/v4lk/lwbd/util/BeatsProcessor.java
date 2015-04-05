@@ -10,15 +10,15 @@ import java.util.ArrayList;
  */
 public class BeatsProcessor {
 
-	/**
-	 * Thins beats so that consecutive beats are separated by
+    /**
+     * Thins beats so that consecutive beats are separated by
      * at least <gapMs> milliseconds. Comparison is by sound
      * energy.
      *
      * @param beats array of Beat objects, sorted by time
-	 * @param gapMs minimum time between beats in milliseconds
-	 */
-	public static Beat[] thinBeats(Beat[] beats, long gapMs) {
+     * @param gapMs minimum time between beats in milliseconds
+     */
+    public static Beat[] thinBeats(Beat[] beats, long gapMs) {
         // thin and store survivors to list
         ArrayList<Beat> temp = new ArrayList<Beat>();
         Beat currBeat, prevBeat = beats[0];
@@ -34,23 +34,23 @@ public class BeatsProcessor {
         }
 
         return temp.toArray(new Beat[temp.size()]);
-	}
-	/**
-	 * Filters beats by sound energy.
+    }
+    /**
+     * Filters beats by sound energy.
      *
-	 * @param beats array of Beat objects
-	 * @param minimum minimum sound energy [0..1]
+     * @param beats array of Beat objects
+     * @param minimum minimum sound energy [0..1]
      * @param maximum maximum sound energy [0..1]
-	 * @return
-	 */
-	public static Beat[] filterByEnergy(Beat[] beats, float minimum, float maximum){
-		ArrayList<Beat> result = new ArrayList<Beat>();
-		
-		for (Beat b : beats){
-			if (b.energy > minimum && b.energy < maximum)
-				result.add(b);
-		}
-		
-		return result.toArray(new Beat[result.size()]);
-	}
+     * @return
+     */
+    public static Beat[] filterByEnergy(Beat[] beats, float minimum, float maximum){
+        ArrayList<Beat> result = new ArrayList<Beat>();
+
+        for (Beat b : beats){
+            if (b.energy > minimum && b.energy < maximum)
+                result.add(b);
+        }
+
+        return result.toArray(new Beat[result.size()]);
+    }
 }
