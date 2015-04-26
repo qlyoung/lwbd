@@ -1,7 +1,6 @@
 package v4lk.lwbd;
 
 import v4lk.lwbd.decoders.Decoder;
-import v4lk.lwbd.decoders.JFlacDecoder;
 import v4lk.lwbd.decoders.JLayerMp3Decoder;
 import v4lk.lwbd.decoders.processing.fft.FFT;
 import v4lk.lwbd.util.Beat;
@@ -14,7 +13,7 @@ import java.util.LinkedList;
 
 /**
  * lwbd -- a portable lightweight beat detector
- * 
+ *
  * @author Quentin Young
  */
 public class BeatDetector {
@@ -86,7 +85,7 @@ public class BeatDetector {
                 int end = Math.min(spectralFluxes.size() - 1, i + 10);
                 float mean = 0;
                 for (int j = start; j <= end; j++)
-                mean += spectralFluxes.get(j);
+                    mean += spectralFluxes.get(j);
                 mean /= (end - start);
                 thresholds.add(mean * sensitivity);
             }
@@ -172,9 +171,8 @@ public class BeatDetector {
             return beats;
         }
     }
-    public static class UnsupportedPlatformException extends Exception {}
 
-    public static enum AudioType { MP3, FLAC }
+    public static enum AudioType { MP3 }
     public static enum DetectorSensitivity {
         HIGH (1.0f),
         MIDDLING (1.4f),
@@ -185,95 +183,21 @@ public class BeatDetector {
     }
 
     /**
-     * Perform beat detection on the provided audio data. This method
-     * will block until analysis has completed, which can take a while
-     * depending on the amount of audio to be analyzed and the capabilities
-     * of the hardware.
+     * Perform beat detection on the provided audio data. This method will block until analysis has
+     * completed, which can take a while depending on the amount of audio to be analyzed and the
+     * capabilities of the hardware.
      *
-     * This overload will use the default sensitivity (DetectorSensitivity.MIDDLING).
-     *
-     * @param audio InputStream of encoded audio data corresponding to one of
-     *              the supported types (i.e. .flac, .mp3, etc.)
-     * @param type an AudioType indicating the format of the audio
-     *             @see v4lk.lwbd.BeatDetector.AudioType
+     * @param decoder A Decoder initialized with the audio data to do beat detection on.
+     * @param sensitivity How sensitive the detector will be. High sensitivities will catch subtler beats
+     *                    but will increase false positives. Lower sensitivities will detect fewer beats
+     *                    but with greater accuracy.
      *
      * @return A time-ordered LinkedList of Beat objects.
      *         @see v4lk.lwbd.util.Beat
      *
-     * @throws java.io.IOException on read error. Possibilities include a corrupted
-     * or closed stream, invalid data, or a mismatch between the audio format
-     * indicated by type parameter and the actual data.
-     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
-     * format is not supported on this platform.
+     * @throws IOException on read error.
      */
-    public static Beat[] detectBeats(InputStream audio, AudioType type) throws IOException, UnsupportedPlatformException {
-        return detectBeats(audio, type, DetectorSensitivity.MIDDLING);
-    }
-    /**
-     * Perform beat detection on the provided audio data. This method
-     * will block until analysis has completed, which can take a while
-     * depending on the amount of audio to be analyzed and the capabilities
-     * of the hardware.
-     *
-     * This overload will use the default sensitivity (DetectorSensitivity.MIDDLING).
-     *
-     * @param audio File of encoded audio data corresponding to one of
-     *              the supported types (i.e. .flac, .mp3, etc.)
-     * @param type an AudioType indicating the format of the audio
-     *             @see v4lk.lwbd.BeatDetector.AudioType
-=
-     * @return A time-ordered LinkedList of Beat objects.
-     *         @see v4lk.lwbd.util.Beat
-     *
-     * @throws java.io.IOException on read error. Possibilities include a corrupted
-     * or closed stream, invalid data, a mismatch between the audio format
-     * indicated by type parameter and the actual data, or an invalid File object.
-     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
-     * format is not supported on this platform.
-     */
-    public static Beat[] detectBeats(File audio, AudioType type) throws IOException, UnsupportedPlatformException {
-        return detectBeats(new FileInputStream(audio), type, DetectorSensitivity.MIDDLING);
-    }
-    /**
-     * Perform beat detection on the provided audio data. This method
-     * will block until analysis has completed, which can take a while
-     * depending on the amount of audio to be analyzed and the capabilities
-     * of the hardware.
-     *
-     * @param audio InputStream of encoded audio data corresponding to one of
-     *              the supported types (i.e. .flac, .mp3, etc.)
-     * @param type an AudioType indicating the format of the audio
-     *             @see v4lk.lwbd.BeatDetector.AudioType
-     * @param sensitivity a DetectorSensitivity indicating the detector's
-     *                    propensity to see beats in data
-     *                    @see v4lk.lwbd.BeatDetector.DetectorSensitivity
-     *
-     * @return A time-ordered LinkedList of Beat objects.
-     *         @see v4lk.lwbd.util.Beat
-     *
-     * @throws java.io.IOException on read error. Possibilities include a corrupted
-     * or closed stream, invalid data, or a mismatch between the audio format
-     * indicated by type parameter and the actual data.
-     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
-     * format is not supported on this platform.
-     */
-    public static Beat[] detectBeats(InputStream audio,
-                                               AudioType type,
-                                               DetectorSensitivity sensitivity) throws IOException, UnsupportedPlatformException {
-
-        // initialize the appropriate decoder
-        Decoder decoder;
-        switch (type){
-            case MP3:
-                decoder = new JLayerMp3Decoder(audio);
-                break;
-            case FLAC:
-                decoder = new JFlacDecoder(audio);
-                break;
-            default:
-                throw new UnsupportedPlatformException();
-        }
-
+    public static Beat[] detectBeats(Decoder decoder, DetectorSensitivity sensitivity) throws IOException {
         // do beat detection
         LinkedList<Float> spectralFluxes = AudioFunctions.calculateSpectralFluxes(decoder);
         LinkedList<Float> peaks = AudioFunctions.detectPeaks(spectralFluxes, sensitivity.value);
@@ -284,31 +208,107 @@ public class BeatDetector {
         return ProcessingFunctions.convertToBeatArray(timeEnergyMap);
     }
     /**
-     * Perform beat detection on the provided audio data. This method
-     * will block until analysis has completed, which can take a while
-     * depending on the amount of audio to be analyzed and the capabilities
-     * of the hardware.
+     * Perform beat detection on the provided audio data. This method will block until analysis has
+     * completed, which can take a while depending on the amount of audio to be analyzed and the
+     * capabilities of the hardware.
      *
-     * @param audio File of encoded audio data corresponding to one of
-     *              the supported types (i.e. .flac, .mp3, etc.)
-     * @param type an AudioType indicating the format of the audio
-     *             @see v4lk.lwbd.BeatDetector.AudioType
-     * @param sensitivity a DetectorSensitivity indicating the detector's
-     *                    propensity to see beats in data
-     *                    @see v4lk.lwbd.BeatDetector.DetectorSensitivity
+     * @param decoder A Decoder initialized with the audio data to do beat detection on.
      *
      * @return A time-ordered LinkedList of Beat objects.
      *         @see v4lk.lwbd.util.Beat
      *
-     * @throws java.io.IOException on read error. Possibilities include a corrupted
-     * or closed stream, invalid data, a mismatch between the audio format
-     * indicated by type parameter and the actual data, or an invalid File object.
-     * @throws v4lk.lwbd.BeatDetector.UnsupportedPlatformException if the indicated
-     * format is not supported on this platform.
+     * @throws IOException on read error.
      */
-    public static Beat[] detectBeats(File audio,
-                                               AudioType type,
-                                               DetectorSensitivity sensitivity) throws IOException, UnsupportedPlatformException {
+    public static Beat[] detectBeats(Decoder decoder) throws IOException {
+        return detectBeats(decoder, DetectorSensitivity.MIDDLING);
+    }
+    /**
+     * Perform beat detection on the provided audio data. This method will block until analysis has
+     * completed, which can take a while depending on the amount of audio to be analyzed and the
+     * capabilities of the hardware.
+     * This overload will use this platform's default decoder for the provided audio type.
+     *
+     * @param audio File of encoded audio data corresponding to one of the types enumerated in AudioType.
+     * @param type An AudioType indicating the format of the audio.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     * @param sensitivity How sensitive the detector will be. High sensitivities will catch subtler beats
+     *                    but will increase false positives. Lower sensitivities will detect fewer beats
+     *                    but with greater accuracy.
+     *
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws IOException on read error.
+     */
+    public static Beat[] detectBeats(File audio, AudioType type, DetectorSensitivity sensitivity) throws IOException{
         return detectBeats(new FileInputStream(audio), type, sensitivity);
     }
+    /**
+     * Perform beat detection on the provided audio data. This method will block until analysis has
+     * completed, which can take a while depending on the amount of audio to be analyzed and the
+     * capabilities of the hardware.
+     * This overload will use this platform's default decoder for the provided audio type.
+     *
+     * @param audio File of encoded audio data corresponding to one of the types enumerated in AudioType.
+     * @param type An AudioType indicating the format of the audio.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     *
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws IOException on read error.
+     */
+    public static Beat[] detectBeats(File audio, AudioType type) throws IOException {
+        return detectBeats(new FileInputStream(audio), type, DetectorSensitivity.MIDDLING);
+    }
+    /**
+     * Perform beat detection on the provided audio data. This method will block until analysis has
+     * completed, which can take a while depending on the amount of audio to be analyzed and the
+     * capabilities of the hardware.
+     * This overload will use this platform's default decoder for the provided audio type.
+     *
+     * @param audio InputStream of encoded audio data corresponding to one of the types enumerated in AudioType.
+     * @param type An AudioType indicating the format of the audio.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     * @param sensitivity How sensitive the detector will be. High sensitivities will catch subtler beats
+     *                    but will increase false positives. Lower sensitivities will detect fewer beats
+     *                    but with greater accuracy.
+     *
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws IOException on read error.
+     */
+    public static Beat[] detectBeats(InputStream audio, AudioType type, DetectorSensitivity sensitivity) throws IOException{
+        Decoder decoder;
+
+        switch (type) {
+            case MP3:
+                decoder = new JLayerMp3Decoder(audio);
+                break;
+            default:
+                decoder = new JLayerMp3Decoder(audio);
+        }
+
+        return detectBeats(decoder, sensitivity);
+    }
+    /**
+     * Perform beat detection on the provided audio data. This method will block until analysis has
+     * completed, which can take a while depending on the amount of audio to be analyzed and the
+     * capabilities of the hardware.
+     * This overload will use this platform's default decoder for the provided audio type.
+     *
+     * @param audio InputStream of encoded audio data corresponding to one of the types enumerated in AudioType.
+     * @param type An AudioType indicating the format of the audio.
+     *             @see v4lk.lwbd.BeatDetector.AudioType
+     *
+     * @return A time-ordered LinkedList of Beat objects.
+     *         @see v4lk.lwbd.util.Beat
+     *
+     * @throws java.io.IOException on read error.
+     */
+    public static Beat[] detectBeats(InputStream audio, AudioType type) throws IOException {
+        return detectBeats(audio, type, DetectorSensitivity.MIDDLING);
+    }
+
 }
