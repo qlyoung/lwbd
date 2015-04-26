@@ -18,18 +18,31 @@ public class Examples {
     public static void main(String[] args) throws IOException {
         // Detect beats from an MP3 file using the platform's default MP3 decoder
         {
-            File audioFile = new File(args[0]);
-            Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.MP3, DetectorSensitivity.LOW);
+            File audioFile = new File("/path/to/audiofile.mp3");
+            Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.MP3);
         }
 
-        // Detect beats from an MP3 file by manually picking the decoder
+        // Detect beats from an MP3 file, using a specific decoder
         {
-            File audioFile = new File(args[0]);
+            File audioFile = new File("/path/to/audiofile.mp3");
+            FileInputStream stream = new FileInputStream(audioFile);
+            Decoder decoder = new JLayerMp3Decoder(stream);
+            Beat[] beats = BeatDetector.detectBeats(decoder);
+        }
+
+        // Detect beats from an MP3 file, specifying detector sensitivity
+        {
+            File audioFile = new File("/path/to/audiofile.mp3");
+            Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.MP3, DetectorSensitivity.HIGH);
+        }
+
+        // Detect beats from an MP3 file, using a specific decoder and specifying detector sensitivity
+        {
+            File audioFile = new File("/path/to/audiofile.mp3");
             FileInputStream stream = new FileInputStream(audioFile);
             Decoder decoder = new JLayerMp3Decoder(stream);
             Beat[] beats = BeatDetector.detectBeats(decoder, DetectorSensitivity.LOW);
         }
-
     }
 
 }
