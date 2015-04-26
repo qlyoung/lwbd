@@ -20,24 +20,24 @@ sample rate, you'll get garbage output.
 
 **Format availability by platform:**
 
-| Format | Android | Desktop |
-| :----- | :-----: | :-----: |
-| MP3    | Yes     | Yes     |
-| Vorbis | Yes     | Yes     |
-| AAC    | No      | No      |
-| FLAC   | No      | No      |
-| WMA    | No      | No      |
-| AIFF   | No      | No      |
+| Format     | Android         | Desktop (JavaSE) |
+| :-----     | :-------------: | :--------------: |
+| MP3        | Yes             | Yes              |
+| Ogg Vorbis | In Progress     | In Progress      |
+| AAC        | No              | No               |
+| FLAC       | No              | In Progress      |
+| WMA        | No              | No               |
+| AIFF       | No              | No               |
 
 Usage
 -----
 lwbd's capabilities are accessed through a single method, BeatDetector.detectBeats().
-```
-File audioFile = new File("audio.mp3");
+```java
+File audioFile = new File("/path/to/audiofile.mp3");
 Beat[] beats = BeatDetector.detectBeats(audioFile, AudioType.MP3);
 ```
 BeatDetector provides overloads of this method that support additional input sources
-and options.
+and options. See src/v4lk/lwbd/Examples.java for examples.
 
 Contributing
 ------------
@@ -53,25 +53,21 @@ Instead, lwbd's strategy is to pilfer the sources for external decoder libraries
 wrap them for compatibility, and section them off by platform. None of this is
 exposed to client code; for (lots of) convenience, lwbd handles decoding audio
 behind the scenes. Decoders are located in ```v4lk.lwbd.decoders```. The pilfered
-sources they wrap are in ```v4lk.lwbd.decoders.processing```. If you want to add support
-for new formats or platforms, the process is:
+sources they wrap are in ```v4lk.lwbd.decoders.processing```. If you want to add
+support for new formats or platforms, the process is:
 
 1. Fork lwbd.
 2. Implement the interface ```v4lk.lwbd.decoders.Decoder``` to add your new
    decoder.
 3. Send me a pull request. If it works, I'll merge it in.
 
-If you do this I will love you forever. If you cbf, just implement the interface
-and send me the code in some fashion. I'll integrate it in if it works.
-
-The interface only has one method and is extensively Javadoc'd. I've tried
-to make it as easy as possible to contribute.
+The interface only has one method and is extensively Javadoc'd. I've tried to
 
 Technical
 ---------
 lwbd's beat detection algorithm is an implementation of Frédéric Patin's Frequency
 Selected Sound Energy Algorithm #1, found in his excellent paper
-["Beat Detetion Algorithms."](http://www.flipcode.com/misc/BeatDetectionAlgorithms.pdf)
+["Beat Detection Algorithms."](http://www.flipcode.com/misc/BeatDetectionAlgorithms.pdf)
 
 License
 -------
