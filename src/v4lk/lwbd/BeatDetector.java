@@ -1,9 +1,9 @@
 package v4lk.lwbd;
 
 import v4lk.lwbd.decoders.Decoder;
-import v4lk.lwbd.decoders.universal.JFlacDecoder;
-import v4lk.lwbd.decoders.universal.JLayerMp3Decoder;
-import v4lk.lwbd.processing.fft.FFT;
+import v4lk.lwbd.decoders.JFlacDecoder;
+import v4lk.lwbd.decoders.JLayerMp3Decoder;
+import v4lk.lwbd.decoders.processing.fft.FFT;
 import v4lk.lwbd.util.Beat;
 
 import java.io.*;
@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.zip.DataFormatException;
 
 /**
  * lwbd -- a portable lightweight beat detector

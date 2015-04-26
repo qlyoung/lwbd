@@ -6,7 +6,7 @@ import v4lk.lwbd.util.Beat;
 import java.io.File;
 import java.io.IOException;
 
-/***
+/**
  * Runnable CLI example
  */
 public class Example {

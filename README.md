@@ -53,7 +53,7 @@ Instead, lwbd's strategy is to pilfer the sources for external decoder libraries
 wrap them for compatibility, and section them off by platform. None of this is
 exposed to client code; for (lots of) convenience, lwbd handles decoding audio
 behind the scenes. Decoders are located in ```v4lk.lwbd.decoders```. The pilfered
-sources they wrap are in ```v4lk.lwbd.processing```. If you want to add support
+sources they wrap are in ```v4lk.lwbd.decoders.processing```. If you want to add support
 for new formats or platforms, the process is:
 
 1. Fork lwbd.
