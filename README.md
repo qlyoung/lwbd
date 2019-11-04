@@ -1,6 +1,16 @@
 lwbd
 ====
 
+### This project is no longer maintained.
+You may be interested in:
+- https://github.com/deezer/spleeter
+- https://github.com/chrvadala/music-beat-detector
+
+Unfortunately, neither of these are easy to use on Android. If anyone wants to
+take over this project please let me know.
+
+------
+
 *A lightweight beat detection library designed for simplicity and portability*
 
 What it does
